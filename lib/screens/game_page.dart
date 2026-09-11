@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
-import 'leaderboard_page.dart';
+import 'classement_general_page.dart';
 import 'memory_page.dart';
 
 /// ============================================================
@@ -80,10 +80,10 @@ class _GameViewState extends State<_GameView> {
     );
   }
 
-  /// Ouvre l'écran de classement mondial.
+  /// Ouvre l'écran des classements (jeu principal + Mémory).
   void _ouvrirClassement() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LeaderboardPage()),
+      MaterialPageRoute(builder: (_) => const ClassementGeneralPage()),
     );
   }
 
@@ -107,7 +107,7 @@ class _GameViewState extends State<_GameView> {
             onPressed: _ouvrirMemory,
           ),
           IconButton(
-            tooltip: 'Classement mondial',
+            tooltip: 'Classements',
             icon: const Icon(Icons.leaderboard),
             onPressed: _ouvrirClassement,
           ),
