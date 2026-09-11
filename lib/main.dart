@@ -44,6 +44,10 @@ class MonJeu extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: .fromSeed(seedColor: Colors.teal),
+        // Ripple classique au lieu de l'effet "sparkle" Material 3 :
+        // 1) plus fiable sur tous les GPU Android,
+        // 2) supprime la dépendance à un shader pendant les tests.
+        splashFactory: InkRipple.splashFactory,
       ),
       home: const Racine(),
     );

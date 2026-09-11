@@ -10,6 +10,9 @@ Widget fabriqueJeu({
   int Function()? secretGenerator,
 }) {
   return MaterialApp(
+    // Ripple classique (comme dans l'app) : évite le shader "sparkle"
+    // Material 3, qui échoue à se compiler dans l'environnement de test.
+    theme: ThemeData(splashFactory: InkRipple.splashFactory),
     home: GamePage(
       saveScore: saveScore,
       onLogout: onLogout,
