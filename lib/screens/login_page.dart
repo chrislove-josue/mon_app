@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// ============================================================
 /// ÉCRAN DE CONNEXION / INSCRIPTION (Firebase Auth)
@@ -87,6 +89,16 @@ class _LoginPageState extends State<LoginPage> {
       'invalid-credential' => 'Email ou mot de passe incorrect.',
       _ => 'Erreur : $code',
     };
+  }
+
+  /// Ouvre le fichier APK hébergé pour le télécharger sur un téléphone.
+  Future<void> _telechargerApk() async {
+    // Sur le web on affiche aussi ce bouton : la plateforme mobile
+    // concernée est Android, pas la plateforme Flutter courante.
+    final uri = Uri.parse('apk/devine-le-nombre.apk');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   @override

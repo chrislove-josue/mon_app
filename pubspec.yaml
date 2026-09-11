@@ -46,6 +46,9 @@ dependencies:
   # --- Notifications push ---
   firebase_messaging: ^16.0.0
 
+  # --- Ouverture de liens (téléchargement APK) ---
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
