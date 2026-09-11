@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/game_page.dart';
 import 'screens/login_page.dart';
+import 'services/notification_service.dart';
 
 /// ============================================================
 /// MON APP FLUTTER + FIREBASE
@@ -24,7 +25,11 @@ Future<void> main() async {
   // 2. Démarre Firebase avec la config de ta plateforme (web, android...).
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 3. Lance l'application.
+  // 3. Prépare les notifications push (permission, token, topic).
+  //    Ignore les erreurs : sur desktop/web elles peuvent ne pas être actives.
+  await NotificationService.instance.initialiser().catchError((_) {});
+
+  // 4. Lance l'application.
   runApp(const MonJeu());
 }
 

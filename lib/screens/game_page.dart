@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -65,7 +66,11 @@ class _GameViewState extends State<_GameView> {
 
   /// Déconnexion : retombe sur l'écran de connexion (via la Racine).
   void _deconnexion() {
-    widget.onLogout?.call();
+    if (widget.onLogout != null) {
+      widget.onLogout!(); // mode test : callback injecté
+    } else {
+      FirebaseAuth.instance.signOut(); // production : déconnexion réelle
+    }
   }
 
   /// Ouvre le jeu du Mémory.

@@ -43,6 +43,9 @@ dependencies:
   # --- Gestion d'état ---
   provider: ^6.1.0
 
+  # --- Notifications push ---
+  firebase_messaging: ^16.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
