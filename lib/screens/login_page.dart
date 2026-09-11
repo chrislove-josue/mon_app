@@ -91,13 +91,14 @@ class _LoginPageState extends State<LoginPage> {
     };
   }
 
-  /// Ouvre le fichier APK hébergé pour le télécharger sur un téléphone.
+  /// Ouvre l'APK hébergé pour le télécharger sur un téléphone Android.
   Future<void> _telechargerApk() async {
-    // Sur le web on affiche aussi ce bouton : la plateforme mobile
-    // concernée est Android, pas la plateforme Flutter courante.
+    // Chemin relatif → pointe vers https://ton-site.web.app/apk/...
     final uri = Uri.parse('apk/devine-le-nombre.apk');
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri);
+    } catch (e) {
+      debugPrint('Échec du téléchargement APK : $e');
     }
   }
 
@@ -223,6 +224,30 @@ class _LoginPageState extends State<LoginPage> {
                     style: const TextStyle(color: Colors.teal),
                   ),
                 ),
+
+                // Zone de téléchargement de l'APK Android (visible seulement
+                // sur le web — c'est sur un navigateur qu'on veut l'APK !).
+                if (kIsWeb) ...[
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _chargement ? null : _telechargerApk,
+                    icon: const Icon(Icons.android),
+                    label: const Text('Télécharger l\'APK Android'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.teal,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Colors.teal),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Installe l\'app sur ton téléphone Android',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: .center,
+                  ),
+                ],
               ],
             ),
           ),
