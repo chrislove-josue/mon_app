@@ -2,24 +2,38 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 /// ============================================================
-/// CLASSEMENT MONDIAL (Cloud Firestore)
+/// CLASSEMENT (Cloud Firestore) — écran RÉUTILISABLE
 /// ============================================================
 ///
-/// Firestore fonctionne en temps réel : StreamBuilder s'abonne
-/// aux données et l'écran se met à jour tout seul quand un
-/// autre joueur bat son record. 
+/// Paramétré par : la collection, le titre, le champ de tri et l'unité.
+///   - Jeu principal  : collection 'scores', tri sur 'tentatives', 'essais'
+///   - Mémory         : collection 'memory_scores', tri sur 'coups', 'coups'
 ///
-/// On trie par « tentatives » croissant (le plus petit = le meilleur).
+/// Firestore fonctionne en temps réel : si un autre joueur bat un record
+/// pendant que tu regardes le classement, il se met à jour tout seul !
 /// ============================================================
 
 class LeaderboardPage extends StatelessWidget {
-  const LeaderboardPage({super.key});
+  const LeaderboardPage({
+    super.key,
+    this.collection = 'scores',
+    this.titre = '🏆 Classement mondial',
+    this.champTri = 'tentatives',
+    this.unite = 'essais',
+    this.messageVide = 'Aucun score pour le moment. Sois le premier ! 🎯',
+  });
+
+  final String collection;
+  final String titre;
+  final String champTri;
+  final String unite;
+  final String messageVide;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🏆 Classement mondial'),
+        title: Text(titre),
         centerTitle: true,
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
@@ -27,8 +41,8 @@ class LeaderboardPage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         // Souscription en temps réel aux 10 meilleurs scores.
         stream: FirebaseFirestore.instance
-            .collection('scores')
-            .orderBy('tentatives', descending: false)
+            .collection(collection)
+            .orderBy(champTri, descending: false)
             .limit(10)
             .snapshots(),
         builder: (context, snapshot) {
@@ -44,9 +58,7 @@ class LeaderboardPage extends StatelessWidget {
 
           final docs = snapshot.data!.docs;
           if (docs.isEmpty) {
-            return const Center(
-              child: Text('Aucun score pour le moment. Sois le premier ! 🎯'),
-            );
+            return Center(child: Text(messageVide));
           }
 
           // Liste du classement, une ligne par joueur.
@@ -56,7 +68,7 @@ class LeaderboardPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
               final email = (data['email'] as String?) ?? 'anonyme';
-              final tentatives = (data['tentatives'] as num?)?.toInt() ?? 0;
+              final valeur = (data[champTri] as num?)?.toInt() ?? 0;
               final position = index + 1;
 
               return Card(
@@ -70,7 +82,7 @@ class LeaderboardPage extends StatelessWidget {
                     overflow: .ellipsis,
                   ),
                   trailing: Text(
-                    '$tentatives essais',
+                    '$valeur $unite',
                     style: TextStyle(
                       fontWeight: .bold,
                       color: Colors.teal.shade700,

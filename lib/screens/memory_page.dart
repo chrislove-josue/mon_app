@@ -1,6 +1,11 @@
 import 'dart:math';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+
+import 'leaderboard_page.dart';
 
 /// ============================================================
 /// LE JEU « MÉMORY »
@@ -26,7 +31,10 @@ class _Carte {
 }
 
 class MemoryPage extends StatefulWidget {
-  const MemoryPage({super.key});
+  const MemoryPage({super.key, this.saveScore});
+
+  /// Injection utilisée dans les tests (remplace Firestore).
+  final Future<void> Function(int coups)? saveScore;
 
   @override
   State<MemoryPage> createState() => _MemoryPageState();
@@ -98,6 +106,11 @@ class _MemoryPageState extends State<MemoryPage> {
         premiere.trouvee = true;
         carte.trouvee = true;
       });
+
+      // Toutes les cartes trouvées → victoire → sauvegarde du score.
+      if (_gagne) {
+        _enregistrerScore(_coups);
+      }
       return;
     }
 
@@ -116,6 +129,56 @@ class _MemoryPageState extends State<MemoryPage> {
   /// La partie est gagnée quand toutes les cartes sont trouvées.
   bool get _gagne => _cartes.every((c) => c.trouvee);
 
+  /// Sauvegarde le record. Le « meilleur » score = le moins de coups.
+  Future<void> _enregistrerScore(int coups) async {
+    try {
+      if (widget.saveScore != null) {
+        await widget.saveScore!(coups); // mode test
+      } else {
+        await _sauverDansFirestore(coups);
+      }
+    } catch (e) {
+      debugPrint('Échec de la sauvegarde du score Mémory : $e');
+    }
+  }
+
+  Future<void> _sauverDansFirestore(int coups) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Un document par joueur, dans la collection « memory_scores ».
+    final ref = FirebaseFirestore.instance
+        .collection('memory_scores')
+        .doc(user.uid);
+
+    final doc = await ref.get();
+    final actuel = doc.exists ? (doc['coups'] as num?)?.toInt() : null;
+
+    // On garde le MEILLEUR score (le plus petit nombre de coups).
+    final meilleur = (actuel == null || coups < actuel) ? coups : actuel;
+
+    await ref.set({
+      'email': user.email ?? 'anonyme',
+      'coups': meilleur,
+      'date': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Ouvre le classement du Mémory.
+  void _ouvrirClassement() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const LeaderboardPage(
+          collection: 'memory_scores',
+          titre: '🧠 Classement Mémory',
+          champTri: 'coups',
+          unite: 'coups',
+          messageVide: 'Aucune partie de Mémory pour le moment. Joue ! 🐠',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,6 +187,14 @@ class _MemoryPageState extends State<MemoryPage> {
         centerTitle: true,
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            tooltip: 'Classement Mémory',
+            icon: const Icon(Icons.leaderboard),
+            onPressed: _ouvrirClassement,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
