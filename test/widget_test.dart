@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mon_app/main.dart';
+import 'package:mon_app/screens/game_page.dart';
+
+Widget fabriqueJeu({
+  Future<void> Function(int)? saveScore,
+  VoidCallback? onLogout,
+  int Function()? secretGenerator,
+}) {
+  return MaterialApp(
+    home: GamePage(
+      saveScore: saveScore,
+      onLogout: onLogout,
+      secretGenerator: secretGenerator,
+    ),
+  );
+}
 
 void main() {
   testWidgets('Le jeu se lance et affiche le message de départ',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MonJeu());
+    await tester.pumpWidget(fabriqueJeu());
 
     expect(find.text('🎯 Devine le nombre'), findsOneWidget);
     expect(find.text('Entrée un nombre entre 1 et 100 !'), findsOneWidget);
@@ -16,7 +30,7 @@ void main() {
 
   testWidgets('Un essai invalide affiche un message d erreur',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MonJeu());
+    await tester.pumpWidget(fabriqueJeu());
 
     await tester.enterText(find.byType(TextField), 'abc');
     await tester.tap(find.text('Essayer'));
@@ -27,13 +41,47 @@ void main() {
   });
 
   testWidgets('Un mauvais essai réduit le compteur', (WidgetTester tester) async {
-    await tester.pumpWidget(const MonJeu());
+    await tester.pumpWidget(fabriqueJeu(secretGenerator: () => 7));
 
     await tester.enterText(find.byType(TextField), '42');
     await tester.tap(find.text('Essayer'));
     await tester.pump();
 
-    expect(find.text('Tentatives : 1 / 10'), findsOneWidget);
+    expect(find.textContaining('Tentatives : 1 / 10'), findsOneWidget);
     expect(find.textContaining('Dernier essai : 42'), findsOneWidget);
+  });
+
+  testWidgets('La victoire sauvegarde le score', (WidgetTester tester) async {
+    final sauvegardes = <int>[];
+    await tester.pumpWidget(
+      fabriqueJeu(
+        saveScore: (tentatives) async {
+          sauvegardes.add(tentatives);
+        },
+        secretGenerator: () => 42, // le secret est connu
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), '42');
+    await tester.tap(find.text('Essayer'));
+    await tester.pumpAndSettle();
+
+    expect(sauvegardes, isNotEmpty);
+    expect(sauvegardes.first, 1);
+    expect(find.textContaining('BRAVO'), findsOneWidget);
+    expect(find.text('🔄 Rejouer'), findsOneWidget);
+  });
+
+  testWidgets('Le bouton de déconnexion est appelé',
+      (WidgetTester tester) async {
+    var deconnecte = false;
+    await tester.pumpWidget(
+      fabriqueJeu(onLogout: () => deconnecte = true),
+    );
+
+    await tester.tap(find.byIcon(Icons.logout));
+    await tester.pump();
+
+    expect(deconnecte, isTrue);
   });
 }
