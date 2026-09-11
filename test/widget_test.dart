@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mon_app/screens/game_page.dart';
+import 'package:mon_app/screens/memory_page.dart';
 
 Widget fabriqueJeu({
   Future<void> Function(int)? saveScore,
@@ -83,5 +84,29 @@ void main() {
     await tester.pump();
 
     expect(deconnecte, isTrue);
+  });
+
+  testWidgets('Le Mémory démarre avec un compteur à zéro',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+
+    expect(find.text('Coups : 0'), findsOneWidget);
+    expect(find.byIcon(Icons.question_mark), findsWidgets);
+  });
+
+  testWidgets('Le Mémory permet de retourner des cartes',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+
+    // Retourner une première carte change le compteur de paires visibles.
+    final cartes = find.byType(GestureDetector);
+    await tester.tap(cartes.at(0));
+    await tester.pumpAndSettle();
+
+    // Un coup = retourner deux cartes.
+    await tester.tap(cartes.at(1));
+    await tester.pump(const Duration(milliseconds: 800)); // laisse le timer finir
+
+    expect(find.text('Coups : 1'), findsOneWidget);
   });
 }

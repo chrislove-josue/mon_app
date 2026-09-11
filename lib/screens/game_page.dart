@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'leaderboard_page.dart';
+import 'memory_page.dart';
 
 /// ============================================================
 /// LE JEU « DEVINE LE NOMBRE »
@@ -169,6 +170,13 @@ class _GamePageState extends State<GamePage> {
     }
   }
 
+  /// Ouvre le jeu du Mémory.
+  void _ouvrirMemory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const MemoryPage()),
+    );
+  }
+
   /// Ouvre l'écran de classement mondial.
   void _ouvrirClassement() {
     Navigator.of(context).push(
@@ -185,6 +193,11 @@ class _GamePageState extends State<GamePage> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            tooltip: 'Jouer au Mémory',
+            icon: const Icon(Icons.extension),
+            onPressed: _ouvrirMemory,
+          ),
           IconButton(
             tooltip: 'Classement mondial',
             icon: const Icon(Icons.leaderboard),
