@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027456897573",
+    "project_id": "club-1778796717158",
+    "storage_bucket": "club-1778796717158.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027456897573:android:eb678cfaeb48ddf04365cc",
+        "android_client_info": {
+          "package_name": "com.benin.mon_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHJS95-Ieg5z1_WJnqnblTX8-y5xqqBJE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
