@@ -91,14 +91,16 @@ class _LoginPageState extends State<LoginPage> {
     };
   }
 
-  /// Ouvre la page GitHub de l'APK pour le télécharger sur un téléphone.
+  /// Lance directement le téléchargement de l'APK (aucune redirection).
   Future<void> _telechargerApk() async {
+    // Lien "raw" de GitHub : le navigateur télécharge le fichier
+    // immédiatement au lieu d'afficher la page du dépôt.
     final uri = Uri.parse(
-        'https://github.com/chrislove-josue/mon_app/blob/main/apk/devine-le-nombre.apk');
+        'https://raw.githubusercontent.com/chrislove-josue/mon_app/main/apk/devine-le-nombre.apk');
     try {
       await launchUrl(uri);
     } catch (e) {
-      debugPrint('Échec de l\'ouverture du téléchargement APK : $e');
+      debugPrint('Échec du téléchargement APK : $e');
     }
   }
 
