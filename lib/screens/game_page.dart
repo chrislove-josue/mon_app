@@ -1,26 +1,22 @@
-import 'dart:math';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/game_provider.dart';
 import 'leaderboard_page.dart';
 import 'memory_page.dart';
 
 /// ============================================================
-/// LE JEU « DEVINE LE NOMBRE »
+/// LE JEU « DEVINE LE NOMBRE » (version Provider)
 /// ============================================================
 ///
-/// Découpé en 3 responsabilités :
-///   - afficher et jouer (StatefulWidget + setState)
-///   - sauvegarder le score dans Firestore (mise à jour du record)
-///   - déconnexion + accès au classement
+/// GamePage ne fait que 2 choses :
+///   1. créer le GameProvider (ChangeNotifier)
+///   2. afficher _GameView, qui « écoute » ce provider
 ///
-/// Astuce tests : saveScore et onLogout peuvent être injectés
-/// pour tester le jeu sans connexion réelle à Firebase.
+/// L'état du jeu vit dans GameProvider (providers/game_provider.dart).
 /// ============================================================
 
-class GamePage extends StatefulWidget {
+class GamePage extends StatelessWidget {
   const GamePage({
     super.key,
     this.saveScore,
@@ -28,36 +24,38 @@ class GamePage extends StatefulWidget {
     this.secretGenerator,
   });
 
-  /// Remplace le comportement Firestore (utilisé dans les tests).
+  /// Injection utilisée dans les tests.
   final Future<void> Function(int tentatives)? saveScore;
-
-  /// Remplace la déconnexion Firebase (utilisé dans les tests).
   final VoidCallback? onLogout;
-
-  /// Remplace le tirage aléatoire du nombre secret (utilisé dans les tests).
   final int Function()? secretGenerator;
 
   @override
-  State<GamePage> createState() => _GamePageState();
+  Widget build(BuildContext context) {
+    // ChangeNotifierProvider : rend le provider disponible dans tout
+    // les widgets sous GamePage. « create » construit l'objet.
+    return ChangeNotifierProvider(
+      create: (_) => GameProvider(
+        saveScore: saveScore,
+        secretGenerator: secretGenerator,
+      )..nouvellePartie(),
+      child: _GameView(onLogout: onLogout),
+    );
+  }
 }
 
-class _GamePageState extends State<GamePage> {
-  // --- Les variables qui représentent l'état du jeu ---
+/// La partie « interface » du jeu. StatefulWidget parce qu'elle possède
+/// le TextEditingController (qui doit être libéré avec dispose()).
+class _GameView extends StatefulWidget {
+  const _GameView({this.onLogout});
 
-  static const _maxTentatives = 10; // nombre maximum d'essais
-  final _controller = TextEditingController(); // l'entrée de texte
-  int _secret = 0; // le nombre mystère
-  int _tentatives = 0; // compteur de tentatives
-  String _message = 'Entrée un nombre entre 1 et 100 !'; // message affiché
-  int? _dernierChiffre; // le dernier nombre proposé
-  bool _gagne = false; // la partie est-elle gagnée ?
-  bool _perdu = false; // a-t-on épuisé toutes les tentatives ?
+  final VoidCallback? onLogout;
 
   @override
-  void initState() {
-    super.initState();
-    _nouvellePartie();
-  }
+  State<_GameView> createState() => _GameViewState();
+}
+
+class _GameViewState extends State<_GameView> {
+  final _controller = TextEditingController();
 
   @override
   void dispose() {
@@ -65,109 +63,9 @@ class _GamePageState extends State<GamePage> {
     super.dispose();
   }
 
-  /// Choisit un nouveau nombre secret.
-  void _nouvellePartie() {
-    // Par défaut : tirage aléatoire 1 → 100.
-    // Dans les tests : on peut imposer un nombre précis.
-    final aleatoire =
-        widget.secretGenerator ?? () => Random().nextInt(100) + 1;
-
-    setState(() {
-      _secret = aleatoire();
-      _tentatives = 0;
-      _message = 'Entrée un nombre entre 1 et 100 !';
-      _dernierChiffre = null;
-      _gagne = false;
-      _perdu = false;
-      _controller.clear();
-    });
-  }
-
-  /// Compare la proposition au nombre secret.
-  void _essayer() {
-    // int.tryParse : essaie de transformer le texte en nombre.
-    // Retourne null si ce n'est pas un nombre valide.
-    final proposition = int.tryParse(_controller.text);
-
-    if (proposition == null) {
-      setState(() {
-        _message = 'Écris un vrai nombre (1 à 100) 🤔';
-      });
-      return;
-    }
-
-    setState(() {
-      _tentatives++;
-      _dernierChiffre = proposition;
-
-      // Les conditions classiques if / else !
-      if (proposition == _secret) {
-        _gagne = true;
-        _message = '🎉 BRAVO ! Tu as trouvé $proposition en '
-            '$_tentatives tentatives !';
-        // Victoire → on sauvegarde le score.
-        _enregistrerScore(_tentatives);
-      } else if (_tentatives >= _maxTentatives) {
-        // Plus aucun essai restant → défaite
-        _perdu = true;
-        _message = '😞 Perdu ! Le nombre était $_secret. '
-            'Tu as utilisé tes $_maxTentatives tentatives !';
-      } else if (proposition < _secret) {
-        _message = '⬆️ Plus grand que $proposition !';
-      } else {
-        _message = '⬇️ Plus petit que $proposition !';
-      }
-    });
-  }
-
-  /// Sauvegarde le record. Le « meilleur » score = le moins de tentatives.
-  Future<void> _enregistrerScore(int tentatives) async {
-    try {
-      if (widget.saveScore != null) {
-        // Mode test : on utilise la fonction fournie.
-        await widget.saveScore!(tentatives);
-      } else {
-        await _sauverDansFirestore(tentatives);
-      }
-    } catch (e) {
-      // Le jeu continue même si la sauvegarde échoue (pas d'internet...).
-      debugPrint('Échec de la sauvegarde du score : $e');
-    }
-  }
-
-  Future<void> _sauverDansFirestore(int tentatives) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    // Chaque joueur a UN document dans la collection « scores »,
-    // identifié par son uid Firebase.
-    final ref =
-        FirebaseFirestore.instance.collection('scores').doc(user.uid);
-
-    final doc = await ref.get();
-    // Le record existant, si présent.
-    final actuel = doc.exists
-        ? (doc['tentatives'] as num?)?.toInt()
-        : null;
-
-    // On garde le MEILLEUR score (le plus petit nombre de tentatives).
-    final meilleur =
-        (actuel == null || tentatives < actuel) ? tentatives : actuel;
-
-    await ref.set({
-      'email': user.email ?? 'anonyme',
-      'tentatives': meilleur,
-      'date': FieldValue.serverTimestamp(),
-    });
-  }
-
   /// Déconnexion : retombe sur l'écran de connexion (via la Racine).
   void _deconnexion() {
-    if (widget.onLogout != null) {
-      widget.onLogout!();
-    } else {
-      FirebaseAuth.instance.signOut();
-    }
+    widget.onLogout?.call();
   }
 
   /// Ouvre le jeu du Mémory.
@@ -186,6 +84,11 @@ class _GamePageState extends State<GamePage> {
 
   @override
   Widget build(BuildContext context) {
+    // context.watch : abonne ce widget au provider.
+    // Dès que notifyListeners() est appelé, ce build() tourne à nouveau.
+    final game = context.watch<GameProvider>();
+    final partieFinie = game.gagne || game.perdu;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('🎯 Devine le nombre'),
@@ -224,7 +127,7 @@ class _GamePageState extends State<GamePage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Tu as $_maxTentatives tentatives maximum !',
+              'Tu as ${GameProvider.maxTentatives} tentatives maximum !',
               style: const TextStyle(fontSize: 14, color: Colors.grey),
               textAlign: .center,
             ),
@@ -234,20 +137,20 @@ class _GamePageState extends State<GamePage> {
             TextField(
               controller: _controller,
               keyboardType: .number,
-              enabled: !_gagne && !_perdu, // désactivé quand la partie est finie
+              enabled: !partieFinie,
               decoration: InputDecoration(
                 labelText: 'Ta proposition',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onSubmitted: (_) => _essayer(),
+              onSubmitted: (_) => game.essayer(_controller.text),
             ),
             const SizedBox(height: 24),
 
             // Le bouton pour essayer
             FilledButton.icon(
-              onPressed: _gagne || _perdu ? null : _essayer,
+              onPressed: partieFinie ? null : () => game.essayer(_controller.text),
               icon: const Icon(Icons.send),
               label: const Text('Essayer'),
               style: FilledButton.styleFrom(
@@ -269,7 +172,7 @@ class _GamePageState extends State<GamePage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                _message,
+                game.message,
                 style: const TextStyle(fontSize: 18, fontWeight: .w600),
                 textAlign: .center,
               ),
@@ -278,16 +181,19 @@ class _GamePageState extends State<GamePage> {
 
             // Le compteur de tentatives + dernière proposition
             Text(
-              'Tentatives : $_tentatives / $_maxTentatives'
-              '${_dernierChiffre != null ? ' • Dernier essai : $_dernierChiffre' : ''}',
+              'Tentatives : ${game.tentatives} / ${GameProvider.maxTentatives}'
+              '${game.dernierChiffre != null ? ' • Dernier essai : ${game.dernierChiffre}' : ''}',
               style: const TextStyle(color: Colors.grey),
             ),
 
             // Le bouton « Rejouer » apparaît quand la partie est finie
-            if (_gagne || _perdu) ...[
+            if (partieFinie) ...[
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: _nouvellePartie,
+                onPressed: () {
+                  _controller.clear();
+                  game.nouvellePartie();
+                },
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
                 ),
