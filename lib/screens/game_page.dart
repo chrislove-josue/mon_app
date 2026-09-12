@@ -338,8 +338,8 @@ class _GameViewState extends State<_GameView> {
               FilledButton(
                 onPressed: () {
                   _controller.clear();
-                  game.nouvellePartie(); // remet le chrono à zéro
-                  _demarrerChrono();
+                  game.nouvellePartie(); // retour à l'écran « Commencer »
+                  _arreterChrono();
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
