@@ -376,6 +376,7 @@ Text(
             ),
             const SizedBox(height: 16),
 
+
             // Bandeau de mémorisation (visible pendant les 5 premières secondes).
             if (_memorisation) ...[
               Container(
