@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +21,7 @@ import 'memory_page.dart';
 /// L'état du jeu vit dans GameProvider (providers/game_provider.dart).
 /// ============================================================
 
-class GamePage extends StatelessWidget {
+class GamePage extends StatefulWidget {
   const GamePage({
     super.key,
     this.saveScore,
@@ -34,20 +36,52 @@ class GamePage extends StatelessWidget {
   final int Function()? secretGenerator;
 
   /// Nombre magique global (défini par l'admin dans config/magic).
-  /// Null → tirage aléatoire habituel.
+  /// Null → tirage aléatoire habituel. Le widget le met à jour en direct
+  /// quand le StreamBuilder de la Racine détecte un changement.
   final int? nombreMagique;
 
   @override
+  State<GamePage> createState() => _GamePageState();
+}
+
+class _GamePageState extends State<GamePage> {
+  /// Le provider du jeu. Créé UNE fois (sinon chaque rebuild du parent
+  /// relancerait la partie).
+  late final GameProvider _game;
+
+  @override
+  void initState() {
+    super.initState();
+    _game = GameProvider(
+      saveScore: widget.saveScore,
+      secretGenerator: widget.secretGenerator,
+      nombreMagique: widget.nombreMagique,
+    )..nouvellePartie();
+  }
+
+  @override
+  void didUpdateWidget(GamePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // L'admin a changé le nombre magique : on le propage au jeu en cours
+    // pour que la PROCHAINE partie (bouton « Commencer ») l'utilise.
+    if (oldWidget.nombreMagique != widget.nombreMagique) {
+      _game.definirNombreMagique(widget.nombreMagique);
+    }
+  }
+
+  @override
+  void dispose() {
+    _game.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // ChangeNotifierProvider : rend le provider disponible dans tout
-    // les widgets sous GamePage. « create » construit l'objet.
-    return ChangeNotifierProvider(
-      create: (_) => GameProvider(
-        saveScore: saveScore,
-        secretGenerator: secretGenerator,
-        nombreMagique: nombreMagique,
-      )..nouvellePartie(),
-      child: _GameView(onLogout: onLogout),
+    // ChangeNotifierProvider.value : le provider appartient à ce State et
+    // reste le même d'un build à l'autre (l'état du jeu est préservé).
+    return ChangeNotifierProvider<GameProvider>.value(
+      value: _game,
+      child: _GameView(onLogout: widget.onLogout),
     );
   }
 }
@@ -68,16 +102,43 @@ class _GameViewState extends State<_GameView> {
 
   bool _estAdmin = false;
 
+  /// Le chrono de la partie (1 tick par seconde).
+  Timer? _chrono;
+
   @override
   void initState() {
     super.initState();
     _verifierAdmin();
+    _demarrerChrono();
   }
 
   @override
   void dispose() {
+    _chrono?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Fait tourner le compte à rebours pendant toute la vie de l'écran.
+  /// Le chrono s'arrête tout seul quand la partie est finie.
+  void _demarrerChrono() {
+    _chrono?.cancel();
+    _chrono = Timer.periodic(const Duration(seconds: 1), (_) {
+      final game = context.read<GameProvider>();
+      game.decrementerTemps();
+      // Plus besoin du chrono une fois la partie terminée.
+      if (game.gagne || game.perdu) {
+        _chrono?.cancel();
+        _chrono = null;
+      }
+    });
+  }
+
+  /// Formatte des secondes en « m:ss » (ex. 60 → 1:00).
+  String _formaterTemps(int secondes) {
+    final m = secondes ~/ 60;
+    final s = (secondes % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   /// Détecte si l'utilisateur connecté est admin (document `admins/{email}`).
@@ -181,36 +242,71 @@ class _GameViewState extends State<_GameView> {
               style: const TextStyle(fontSize: 14, color: Colors.grey),
               textAlign: .center,
             ),
-            const SizedBox(height: 24),
-
-            // Le champ de saisie du nombre
-            TextField(
-              controller: _controller,
-              keyboardType: .number,
-              enabled: !partieFinie,
-              decoration: InputDecoration(
-                labelText: 'Ta proposition',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            const SizedBox(height: 8),
+            // Le compte à rebours de la partie (rouge si ≤ 10 secondes).
+            Text(
+              '⏱ Temps restant : ${_formaterTemps(game.tempsRestant)}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: .bold,
+                color:
+                    game.tempsRestant <= 10 ? Colors.red : Colors.teal,
               ),
-              onSubmitted: (_) => game.essayer(_controller.text),
             ),
             const SizedBox(height: 24),
 
-            // Le bouton pour essayer
-            FilledButton.icon(
-              onPressed: partieFinie ? null : () => game.essayer(_controller.text),
-              icon: const Icon(Icons.send),
-              label: const Text('Essayer'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+            // Avant le lancement par le joueur : on n'affiche PAS la saisie,
+            // seulement un gros bouton « Commencer ».
+            if (!game.partieEnCours && !partieFinie) ...[
+              FilledButton.icon(
+                onPressed: () {
+                  _controller.clear();
+                  game.commencerPartie();
+                  _demarrerChrono();
+                },
+                icon: const Icon(Icons.play_arrow, size: 28),
+                label: const Text('Commencer'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 18,
+                  ),
+                  backgroundColor: Colors.teal,
+                  textStyle: const TextStyle(fontSize: 20),
                 ),
-                backgroundColor: Colors.teal,
               ),
-            ),
+            ] else ...[
+              // Le champ de saisie du nombre
+              TextField(
+                controller: _controller,
+                keyboardType: .number,
+                enabled: !partieFinie,
+                decoration: InputDecoration(
+                  labelText: 'Ta proposition',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onSubmitted: (_) => game.essayer(_controller.text),
+              ),
+              const SizedBox(height: 24),
+
+              // Le bouton pour essayer
+              FilledButton.icon(
+                onPressed: partieFinie
+                    ? null
+                    : () => game.essayer(_controller.text),
+                icon: const Icon(Icons.send),
+                label: const Text('Essayer'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  backgroundColor: Colors.teal,
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
             // La zone de message (réponse du jeu)
@@ -242,7 +338,8 @@ class _GameViewState extends State<_GameView> {
               FilledButton(
                 onPressed: () {
                   _controller.clear();
-                  game.nouvellePartie();
+                  game.nouvellePartie(); // remet le chrono à zéro
+                  _demarrerChrono();
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,

@@ -78,4 +78,87 @@ void main() {
     expect(game.gagne, isTrue);
     expect(game.message, contains('BRAVO'));
   });
+
+  group('Chrono (1 minute de jeu)', () {
+    test('Le temps écoulé déclenche la défaite', () {
+      final game = GameProvider(
+        dureePartieSecondes: 3,
+        secretGenerator: () => 42,
+      );
+      game.nouvellePartie();
+
+      expect(game.tempsRestant, 3);
+      expect(game.perdu, isFalse);
+
+      game.decrementerTemps();
+      game.decrementerTemps();
+      expect(game.perdu, isFalse);
+      expect(game.tempsRestant, 1);
+
+      game.decrementerTemps();
+      expect(game.perdu, isTrue);
+      expect(game.tempsRestant, 0);
+      expect(game.gagne, isFalse);
+      expect(game.message, contains('Temps écoulé'));
+    });
+
+    test('Une fois le temps écoulé, on ne peut plus jouer', () {
+      final game = GameProvider(
+        dureePartieSecondes: 1,
+        secretGenerator: () => 42,
+      );
+      game.nouvellePartie();
+      game.decrementerTemps(); // temps écoulé
+
+      game.essayer('42'); // tentative après la fin : ignorée
+      expect(game.tentatives, 0);
+      expect(game.perdu, isTrue);
+    });
+
+    test('Un temps écoulé ne sauvegarde pas de score', () {
+      final scores = <int>[];
+      final game = GameProvider(
+        dureePartieSecondes: 1,
+        secretGenerator: () => 42,
+        saveScore: (tentatives) async => scores.add(tentatives),
+      );
+      game.nouvellePartie();
+
+      game.decrementerTemps();
+
+      expect(game.perdu, isTrue);
+      expect(scores, isEmpty);
+    });
+
+    test('Nouvelle partie remet le chrono au complet', () {
+      final game = GameProvider(
+        dureePartieSecondes: 3,
+        secretGenerator: () => 42,
+      );
+      game.nouvellePartie();
+      game.decrementerTemps();
+      game.decrementerTemps();
+
+      game.nouvellePartie();
+
+      expect(game.tempsRestant, 3);
+      expect(game.perdu, isFalse);
+    });
+
+    test('Le chrono ne décompte plus après une victoire', () {
+      final game = GameProvider(
+        dureePartieSecondes: 5,
+        secretGenerator: () => 42,
+        saveScore: (_) async {},
+      );
+      game.nouvellePartie();
+      game.essayer('42');
+
+      expect(game.gagne, isTrue);
+      expect(game.tempsRestant, 5);
+
+      game.decrementerTemps();
+      expect(game.tempsRestant, 5); // inchangé
+    });
+  });
 }

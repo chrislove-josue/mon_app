@@ -77,14 +77,15 @@ class Racine extends StatelessWidget {
         final user = snapshot.data;
         if (user == null) return const LoginPage();
 
-        // Connecté : on charge le « nombre magique » du moment (config/magic).
+        // Connecté : on suit EN DIRECT le « nombre magique » (config/magic).
         // S'il existe, tous les joueurs devinent ce même nombre ; sinon,
-        // le jeu garde son tirage aléatoire habituel.
-        return FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance
+        // le jeu garde son tirage aléatoire habituel. Un Stream plutôt
+        // qu'un Future : dès que l'admin change le nombre, le jeu l'écoute.
+        return StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
               .collection('config')
               .doc('magic')
-              .get(),
+              .snapshots(),
           builder: (context, magicSnapshot) {
             if (magicSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(

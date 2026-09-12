@@ -30,6 +30,26 @@ void main() {
     expect(find.text('Entrée un nombre entre 1 et 100 !'), findsOneWidget);
     expect(find.text('Tu as 10 tentatives maximum !'), findsOneWidget);
     expect(find.text('Tentatives : 0 / 10'), findsOneWidget);
+    expect(find.text('⏱ Temps restant : 1:00'), findsOneWidget);
+  });
+
+  testWidgets('Le chrono décompte toutes les secondes',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(fabriqueJeu());
+
+    expect(find.text('⏱ Temps restant : 1:00'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.text('⏱ Temps restant : 0:55'), findsOneWidget);
+  });
+
+  testWidgets('Le temps écoulé termine la partie', (WidgetTester tester) async {
+    await tester.pumpWidget(fabriqueJeu());
+
+    await tester.pump(const Duration(seconds: 60));
+
+    expect(find.textContaining('Temps écoulé'), findsOneWidget);
+    expect(find.text('🔄 Rejouer'), findsOneWidget);
   });
 
   testWidgets('Un essai invalide affiche un message d erreur',

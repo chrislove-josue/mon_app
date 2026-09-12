@@ -21,7 +21,12 @@ import 'package:flutter/foundation.dart';
 /// ============================================================
 
 class GameProvider extends ChangeNotifier {
-  GameProvider({this.saveScore, this.secretGenerator, this.nombreMagique});
+  GameProvider({
+    this.saveScore,
+    this.secretGenerator,
+    int? nombreMagique,
+    this.dureePartieSecondes = defaultDureePartie,
+  }) : _nombreMagique = nombreMagique;
 
   // --- Injection (utilisée dans les tests) ---
   final Future<void> Function(int tentatives)? saveScore;
@@ -30,10 +35,24 @@ class GameProvider extends ChangeNotifier {
   /// Nombre magique central (défini par l'admin dans `config/magic`).
   /// S'il est fourni, TOUTES les parties se jouent avec ce nombre :
   /// tout le monde devine le même nombre. Sinon, tirage aléatoire.
-  final int? nombreMagique;
+  /// Volatile : l'app l'écoute en direct, il change quand l'admin le modifie.
+  int? _nombreMagique;
+  int? get nombreMagique => _nombreMagique;
+
+  /// Met à jour le nombre magique (appelé quand le document `config/magic`
+  /// change en base) : le prochain « Commencer » en tiendra compte.
+  void definirNombreMagique(int? nombre) {
+    if (_nombreMagique == nombre) return;
+    _nombreMagique = nombre;
+    notifyListeners();
+  }
+
+  /// Durée d'une partie (compte à rebours). 2 minutes par défaut.
+  final int dureePartieSecondes;
 
   // --- Constantes ---
   static const maxTentatives = 10;
+  static const defaultDureePartie = 120;
 
   // --- État interne (privé, accessible en lecture via les getters) ---
   int _secret = 0;
@@ -42,6 +61,8 @@ class GameProvider extends ChangeNotifier {
   int? _dernierChiffre;
   bool _gagne = false;
   bool _perdu = false;
+  int _tempsRestant = 0;
+  bool _partieEnCours = false;
 
   // --- Getters : les widgets affichent ces valeurs ---
   int get tentatives => _tentatives;
@@ -50,11 +71,32 @@ class GameProvider extends ChangeNotifier {
   bool get gagne => _gagne;
   bool get perdu => _perdu;
 
-  /// Démarre un nouveau nombre secret.
+  /// Secondes restantes avant la fin du temps de jeu.
+  int get tempsRestant => _tempsRestant;
+
+  /// La partie a-t-elle été lancée par le joueur (« Commencer ») ?
+  bool get partieEnCours => _partieEnCours;
+
+  /// Prépare une nouvelle partie (état initial, chrono remis à zéro).
+  /// Le jeu ne démarre réellement que quand le joueur clique « Commencer ».
   void nouvellePartie() {
-    // Le nombre magique de l'admin prime ; sinon tirage aléatoire 1 → 100.
-    if (nombreMagique != null) {
-      _secret = nombreMagique!;
+    _tentatives = 0;
+    _dernierChiffre = null;
+    _gagne = false;
+    _perdu = false;
+    _tempsRestant = dureePartieSecondes;
+    _partieEnCours = false;
+    _message = 'Appuie sur Commencer pour lancer la partie !';
+
+    // On prévient toutes les pages qui écoutent : « jeux mis à jour ! »
+    notifyListeners();
+  }
+
+  /// Le joueur clique « Commencer » : on tire le nombre secret et on lance
+  /// le chrono. Le nombre magique de l'admin prime ; sinon tirage 1 → 100.
+  void commencerPartie() {
+    if (_nombreMagique != null) {
+      _secret = _nombreMagique!;
     } else {
       final aleatoire = secretGenerator ?? () => Random().nextInt(100) + 1;
       _secret = aleatoire();
@@ -63,14 +105,17 @@ class GameProvider extends ChangeNotifier {
     _dernierChiffre = null;
     _gagne = false;
     _perdu = false;
+    _tempsRestant = dureePartieSecondes;
+    _partieEnCours = true;
     _message = 'Entrée un nombre entre 1 et 100 !';
 
-    // On prévient toutes les pages qui écoutent : « jeux mis à jour ! »
     notifyListeners();
   }
 
   /// Analyse et compare une proposition au nombre secret.
   void essayer(String texte) {
+    // Une partie non lancée ou terminée n'accepte plus de proposition.
+    if (!_partieEnCours || _gagne || _perdu) return;
     // int.tryParse : essaie de transformer le texte en nombre.
     final proposition = int.tryParse(texte);
 
@@ -86,6 +131,7 @@ class GameProvider extends ChangeNotifier {
     if (proposition == _secret) {
       // Victoire !
       _gagne = true;
+      _partieEnCours = false;
       _message = '🎉 BRAVO ! Tu as trouvé $proposition en '
           '$_tentatives tentatives !';
       // On sauvegarde le score (les erreurs sont ignorées).
@@ -93,6 +139,7 @@ class GameProvider extends ChangeNotifier {
     } else if (_tentatives >= maxTentatives) {
       // Plus aucun essai restant → défaite
       _perdu = true;
+      _partieEnCours = false;
       _message = '😞 Perdu ! Le nombre était $_secret. '
           'Tu as utilisé tes $maxTentatives tentatives !';
     } else if (proposition < _secret) {
@@ -101,6 +148,19 @@ class GameProvider extends ChangeNotifier {
       _message = '⬇️ Plus petit que $proposition !';
     }
 
+    notifyListeners();
+  }
+
+  /// Appelé chaque seconde par le chrono : décompte le temps restant.
+  /// Si le temps tombe à zéro, la partie est perdue.
+  void decrementerTemps() {
+    if (!_partieEnCours || _gagne || _perdu || _tempsRestant <= 0) return;
+    _tempsRestant--;
+    if (_tempsRestant == 0) {
+      _perdu = true;
+      _partieEnCours = false;
+      _message = '⏰ Temps écoulé ! Le nombre était $_secret.';
+    }
     notifyListeners();
   }
 
