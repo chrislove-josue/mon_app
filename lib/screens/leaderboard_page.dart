@@ -22,7 +22,7 @@ class LeaderboardPage extends StatelessWidget {
   const LeaderboardPage({
     super.key,
     this.collection = 'scores',
-    this.titre = '🏆 Classement mondial',
+    this.titre = '🏆 Classement général',
     this.champTri = 'tentatives',
     this.unite = 'essais',
     this.messageVide = 'Aucun score pour le moment. Sois le premier ! 🎯',

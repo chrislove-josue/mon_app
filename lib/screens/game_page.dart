@@ -81,11 +81,11 @@ class _GameViewState extends State<_GameView> {
   }
 
   /// Détecte si l'utilisateur connecté est admin (document `admins/{uid}`).
-  /// En mode test (pas de Firestore), l'appel échoue → pas d'icône admin.
+  /// En mode test (pas de Firebase), l'appel échoue → pas d'icône admin.
   Future<void> _verifierAdmin() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
       final admin = await AdminService.instance.estAdmin(user.uid);
       if (mounted) setState(() => _estAdmin = admin);
     } catch (_) {
