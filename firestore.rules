@@ -3,11 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ============================================================
-    // ADMINS — on EST admin si un document `admins/{uid}` existe.
-    // Lisible par tout utilisateur connecté (pour afficher/bouton admin),
-    // modifiable uniquement par les admins déjà connus.
+    // ADMINS — on EST admin si un document `admins/{email}` existe.
+    // L'ID du document est l'EMAIL du compte (créé une fois via la
+    // console Firebase → Firestore). Lisible par tout utilisateur
+    // connecté (pour afficher le bouton admin), modifiable
+    // uniquement par les admins déjà connus.
     // ============================================================
-    match /admins/{uid} {
+    match /admins/{email} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && isAdmin();
     }
@@ -38,10 +40,12 @@ service cloud.firestore {
     }
 
     // ============================================================
-    // AIDE : « isAdmin » vérifie l'existence d'un document admins/{uid}.
+    // AIDE : « isAdmin » vérifie l'existence d'un document admins/{email}.
+    // L'email de l'utilisateur (& request.auth.token.email) doit être
+    // présent comme ID de document de la collection « admins ».
     // ============================================================
     function isAdmin() {
-      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
     }
   }
 }

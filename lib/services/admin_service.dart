@@ -5,8 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// ============================================================
 ///
 /// Côté base de données, il n'y a pas de « rôle » : on EST admin si un
-/// document existe dans la collection `admins/{uid}`. C'est l'admin qui,
-/// le premier, y ajoute son uid (console Firebase ou via le code).
+/// document existe dans la collection `admins/{email}` (l'ID du document
+/// est L'EMAIL du compte, ce qui est simple à créer depuis la console).
+/// C'est l'admin qui, le premier, y ajoute son email via la console.
 ///
 /// Ce service regroupe tout ce que l'espace admin doit savoir faire :
 ///   - vérifier si un utilisateur est admin
@@ -21,9 +22,9 @@ class AdminService {
   Future<DocumentSnapshot> _doc(String collection, String id) =>
       FirebaseFirestore.instance.collection(collection).doc(id).get();
 
-  /// L'utilisateur est-il admin ? (un document `admins/{uid}` existe)
-  Future<bool> estAdmin(String uid) async {
-    final doc = await _doc('admins', uid);
+  /// L'utilisateur est-il admin ? (document `admins/{email}` existe)
+  Future<bool> estAdmin(String email) async {
+    final doc = await _doc('admins', email);
     return doc.exists;
   }
 
