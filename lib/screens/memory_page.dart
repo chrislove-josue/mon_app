@@ -190,7 +190,9 @@ class _MemoryPageState extends State<MemoryPage> {
         _memorisation ||
         _tempsEcoule ||
         carte.faceVisible ||
-        carte.trouvee) return;
+        carte.trouvee) {
+      return;
+    }
 
     setState(() => carte.faceVisible = true);
 
@@ -355,13 +357,14 @@ class _MemoryPageState extends State<MemoryPage> {
                   'Coups : $_coups',
                   style: const TextStyle(fontSize: 16, fontWeight: .w600),
                 ),
-                Text(
+Text(
                   '⏱ ${_formatTemps(_tempsJeuRestant)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: .w600,
-                    color: _tempsJeuRestant <= 30 ? Colors.red : Colors.teal,
+                    color: _tempsJeuRestant <= 10 ? Colors.red : Colors.teal,
                   ),
+                ),
                 ),
                 Text(
                   'Paires : ${_cartes.where((c) => c.trouvee).length ~/ 2} / '
