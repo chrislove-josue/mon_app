@@ -109,29 +109,34 @@ class _GameViewState extends State<_GameView> {
   void initState() {
     super.initState();
     _verifierAdmin();
-    _demarrerChrono();
+    // Pas de chrono ici : c'est le joueur qui lance la partie
+    // avec le bouton « Commencer » (exigence : le joueur démarre).
   }
 
   @override
   void dispose() {
-    _chrono?.cancel();
+    _arreterChrono();
     _controller.dispose();
     super.dispose();
   }
 
-  /// Fait tourner le compte à rebours pendant toute la vie de l'écran.
-  /// Le chrono s'arrête tout seul quand la partie est finie.
+  /// Fait tourner le compte à rebours. Le chrono s'arrête tout seul
+  /// quand la partie est finie.
   void _demarrerChrono() {
-    _chrono?.cancel();
+    if (_chrono != null) return;
     _chrono = Timer.periodic(const Duration(seconds: 1), (_) {
       final game = context.read<GameProvider>();
       game.decrementerTemps();
       // Plus besoin du chrono une fois la partie terminée.
       if (game.gagne || game.perdu) {
-        _chrono?.cancel();
-        _chrono = null;
+        _arreterChrono();
       }
     });
+  }
+
+  void _arreterChrono() {
+    _chrono?.cancel();
+    _chrono = null;
   }
 
   /// Formatte des secondes en « m:ss » (ex. 60 → 1:00).
