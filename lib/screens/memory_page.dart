@@ -442,11 +442,11 @@ class _MemoryPageState extends State<MemoryPage> {
                 label: const Text('Rejouer'),
                 style: FilledButton.styleFrom(backgroundColor: Colors.orange),
               ),
-            ],
-          ],
+],
+          ),
         ),
-      ),
-  );
+      );
+  }
 
   /// Formate des secondes en « m:ss » (ex. 120 → 2:00).
   String _formatTemps(int secondes) {
