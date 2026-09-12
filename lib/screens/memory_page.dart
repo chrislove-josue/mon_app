@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -50,8 +51,56 @@ class _MemoryPageState extends State<MemoryPage> {
   int _coups = 0; // nombre de tentatives
   bool _bloque = false; // on vérifie les cartes, clique désactivé
 
+  // Phase de mémorisation : toutes les cartes sont ouvertes pendant 5 s.
+  bool _memorisation = true;
+  int _secondesRestantes = 5;
+  Timer? _timerMemorisation;
+
   _MemoryPageState() {
     _cartes = _melangerCartes();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Au lancement : ouvre toutes les cartes puis lance le compte à rebours.
+    for (final carte in _cartes) {
+      carte.faceVisible = true;
+    }
+    _demarrerCompteARebours();
+  }
+
+  @override
+  void dispose() {
+    _timerMemorisation?.cancel();
+    super.dispose();
+  }
+
+  /// Démarre le compte à rebours de mémorisation (1 tick / seconde).
+  void _demarrerCompteARebours() {
+    _timerMemorisation?.cancel();
+    _secondesRestantes = 5;
+    _timerMemorisation =
+        Timer.periodic(const Duration(seconds: 1), _tickCompteARebours);
+  }
+
+  /// Une seconde s'écoule… à 0, on referme toutes les cartes.
+  void _tickCompteARebours(Timer timer) {
+    if (!mounted) {
+      timer.cancel();
+      return;
+    }
+    setState(() => _secondesRestantes--);
+
+    if (_secondesRestantes <= 0) {
+      timer.cancel();
+      setState(() {
+        _memorisation = false;
+        for (final carte in _cartes) {
+          carte.faceVisible = false;
+        }
+      });
+    }
   }
 
   /// Crée les 16 cartes (2 de chaque symbole) puis les mélange.
@@ -77,14 +126,20 @@ class _MemoryPageState extends State<MemoryPage> {
       _premiereCarte = null;
       _coups = 0;
       _bloque = false;
+      // Nouvelle partie = nouvelle phase de mémorisation.
+      _memorisation = true;
+      for (final carte in _cartes) {
+        carte.faceVisible = true;
+      }
     });
+    _demarrerCompteARebours();
   }
 
   void _taperCarte(int position) {
     final carte = _cartes[position];
 
-    // On ignore les clics inutiles (carte visible ou déjà trouvée).
-    if (_bloque || carte.faceVisible || carte.trouvee) return;
+    // On ignore les clics inutiles (mémorisation, carte visible/trouvée).
+    if (_bloque || _memorisation || carte.faceVisible || carte.trouvee) return;
 
     setState(() => carte.faceVisible = true);
 
@@ -216,16 +271,46 @@ class _MemoryPageState extends State<MemoryPage> {
             ),
             const SizedBox(height: 16),
 
-            // Grille de cartes (4 colonnes x 4 lignes)
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
+            // Bandeau de mémorisation (visible pendant les 5 premières secondes).
+            if (_memorisation) ...[
+              Container(
+                width: .infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                itemCount: _cartes.length,
-                itemBuilder: (context, i) => _carteWidget(_cartes[i], i),
+                child: Text(
+                  '👀 Mémorise la grille ! $_secondesRestantes s',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: .w600,
+                    color: Colors.orange,
+                  ),
+                  textAlign: .center,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Grille de cartes (4 colonnes x 4 lignes).
+            // Sur écran large (web, tablette) on limite la largeur de la
+            // grille pour garder des cartes de taille raisonnable.
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                    ),
+                    itemCount: _cartes.length,
+                    itemBuilder: (context, i) => _carteWidget(_cartes[i], i),
+                  ),
+                ),
               ),
             ),
 

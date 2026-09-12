@@ -89,17 +89,25 @@ void main() {
     expect(deconnecte, isTrue);
   });
 
-  testWidgets('Le Mémory démarre avec un compteur à zéro',
+  testWidgets('Le Mémory démarre carte ouvertes, puis referme après 5 s',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
 
     expect(find.text('Coups : 0'), findsOneWidget);
+    // Phase de mémorisation : toutes les cartes sont ouvertes (aucun « ? »).
+    expect(find.byIcon(Icons.question_mark), findsNothing);
+
+    // Après 5 secondes, les cartes se referment.
+    await tester.pump(const Duration(seconds: 5));
     expect(find.byIcon(Icons.question_mark), findsWidgets);
   });
 
   testWidgets('Le Mémory permet de retourner des cartes',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+
+    // Attend la fin de la mémorisation pour pouvoir jouer.
+    await tester.pump(const Duration(seconds: 5));
 
     // Retourner une première carte change le compteur de paires visibles.
     final cartes = find.byType(GestureDetector);
