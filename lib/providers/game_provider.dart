@@ -24,9 +24,9 @@ class GameProvider extends ChangeNotifier {
   GameProvider({
     this.saveScore,
     this.secretGenerator,
-    int? nombreMagique,
+    this._nombreMagique,
     this.dureePartieSecondes = defaultDureePartie,
-  }) : _nombreMagique = nombreMagique;
+  });
 
   // --- Injection (utilisée dans les tests) ---
   final Future<void> Function(int tentatives)? saveScore;
