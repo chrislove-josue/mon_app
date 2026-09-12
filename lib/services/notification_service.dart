@@ -52,7 +52,7 @@ class NotificationService {
   }
 }
 
-/// Clé VAPID (Web Push) : à remplacer par la tienne quand tu veux
-/// activer les notifications sur le web.
+/// Clé VAPID (Web Push) du projet Firebase.
 /// Console Firebase → Cloud Messaging → paramètres → Clés Web Push.
-const _vapidKey = 'REMPLACE_MOI_PAR_TA_CLE_VAPID';
+const _vapidKey =
+    'BPEOcC_2uz-_796H-9M6K7646GhDVI4QSnDEIkDx1aHrP9YKTem7XMdw6Xp9MA8T5OW39AEq8bUZlJ-QEzNUKIw';
