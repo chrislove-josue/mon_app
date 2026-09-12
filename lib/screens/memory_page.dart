@@ -56,6 +56,15 @@ class _MemoryPageState extends State<MemoryPage> {
   int _secondesRestantes = 5;
   Timer? _timerMemorisation;
 
+  // Le joueur doit d'abord lancer la partie (« Commencer »).
+  bool _partieDemarree = false;
+
+  // Chrono de jeu : 2 minutes pour tout trouver.
+  static const _dureeJeuSecondes = 120;
+  int _tempsJeuRestant = _dureeJeuSecondes;
+  Timer? _timerJeu;
+  bool _tempsEcoule = false;
+
   _MemoryPageState() {
     _cartes = _melangerCartes();
   }
@@ -63,17 +72,29 @@ class _MemoryPageState extends State<MemoryPage> {
   @override
   void initState() {
     super.initState();
-    // Au lancement : ouvre toutes les cartes puis lance le compte à rebours.
-    for (final carte in _cartes) {
-      carte.faceVisible = true;
-    }
-    _demarrerCompteARebours();
+    // Plus de mémorisation auto : le joueur doit appuyer sur « Commencer ».
   }
 
   @override
   void dispose() {
     _timerMemorisation?.cancel();
+    _timerJeu?.cancel();
     super.dispose();
+  }
+
+  /// Le joueur clique « Commencer » : on ouvre tout pour mémoriser (5 s)
+  /// et on lance le chrono de 2 minutes.
+  void _demarrer() {
+    setState(() {
+      _partieDemarree = true;
+      _tempsEcoule = false;
+      _tempsJeuRestant = _dureeJeuSecondes;
+      for (final carte in _cartes) {
+        carte.faceVisible = true;
+      }
+    });
+    _demarrerCompteARebours();
+    _demarrerChronoJeu();
   }
 
   /// Démarre le compte à rebours de mémorisation (1 tick / seconde).
@@ -82,6 +103,31 @@ class _MemoryPageState extends State<MemoryPage> {
     _secondesRestantes = 5;
     _timerMemorisation =
         Timer.periodic(const Duration(seconds: 1), _tickCompteARebours);
+  }
+
+  /// Démarre le chrono de jeu (2 minutes).
+  void _demarrerChronoJeu() {
+    _timerJeu?.cancel();
+    _timerJeu = Timer.periodic(const Duration(seconds: 1), _tickChronoJeu);
+  }
+
+  /// Une seconde de jeu s'écoule… à 0, le temps est écoulé.
+  void _tickChronoJeu(Timer timer) {
+    if (!mounted) {
+      timer.cancel();
+      return;
+    }
+    setState(() => _tempsJeuRestant--);
+
+    if (_tempsJeuRestant <= 0 || _gagne) {
+      timer.cancel();
+      if (_tempsJeuRestant <= 0) {
+        setState(() {
+          _tempsEcoule = true;
+          _bloque = true;
+        });
+      }
+    }
   }
 
   /// Une seconde s'écoule… à 0, on referme toutes les cartes.
@@ -117,6 +163,8 @@ class _MemoryPageState extends State<MemoryPage> {
   }
 
   void _recommencer() {
+    _timerMemorisation?.cancel();
+    _timerJeu?.cancel();
     setState(() {
       final nouvelle = _melangerCartes();
       // Notre liste est `final`, on l'absorbe complètement.
@@ -126,20 +174,23 @@ class _MemoryPageState extends State<MemoryPage> {
       _premiereCarte = null;
       _coups = 0;
       _bloque = false;
-      // Nouvelle partie = nouvelle phase de mémorisation.
+      _tempsEcoule = false;
+      _tempsJeuRestant = _dureeJeuSecondes;
+      _partieDemarree = false; // retour à l'écran « Commencer »
       _memorisation = true;
-      for (final carte in _cartes) {
-        carte.faceVisible = true;
-      }
+      _secondesRestantes = 5;
     });
-    _demarrerCompteARebours();
   }
 
   void _taperCarte(int position) {
     final carte = _cartes[position];
 
     // On ignore les clics inutiles (mémorisation, carte visible/trouvée).
-    if (_bloque || _memorisation || carte.faceVisible || carte.trouvee) return;
+    if (_bloque ||
+        _memorisation ||
+        _tempsEcoule ||
+        carte.faceVisible ||
+        carte.trouvee) return;
 
     setState(() => carte.faceVisible = true);
 
@@ -250,17 +301,67 @@ class _MemoryPageState extends State<MemoryPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
+      body: !_partieDemarree
+          // ===== Écran « Commencer » : le joueur lance la partie =====
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: .center,
+                  children: [
+                    const Text(
+                      '🧠',
+                      style: TextStyle(fontSize: 72),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Prêt à jouer au Mémory ?',
+                      style: TextStyle(fontSize: 22, fontWeight: .bold),
+                      textAlign: .center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Trouve les 8 paires en moins de 2 minutes !',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                      textAlign: .center,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _demarrer,
+                      icon: const Icon(Icons.play_arrow, size: 28),
+                      label: const Text('Commencer'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 18,
+                        ),
+                        backgroundColor: Colors.teal,
+                        textStyle: const TextStyle(fontSize: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Barre de statut
+            // Barre de statut + chrono
             Row(
               mainAxisAlignment: .spaceBetween,
               children: [
                 Text(
                   'Coups : $_coups',
                   style: const TextStyle(fontSize: 16, fontWeight: .w600),
+                ),
+                Text(
+                  '⏱ ${_formatTemps(_tempsJeuRestant)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: .w600,
+                    color: _tempsJeuRestant <= 10 ? Colors.red : Colors.teal,
+                  ),
                 ),
                 Text(
                   'Paires : ${_cartes.where((c) => c.trouvee).length ~/ 2} / '
@@ -314,7 +415,7 @@ class _MemoryPageState extends State<MemoryPage> {
               ),
             ),
 
-            // Message de victoire + bouton rejouer
+            // Message de victoire / temps écoulé + bouton rejouer
             if (_gagne) ...[
               const SizedBox(height: 12),
               Text(
@@ -328,11 +429,30 @@ class _MemoryPageState extends State<MemoryPage> {
                 label: const Text('Rejouer'),
                 style: FilledButton.styleFrom(backgroundColor: Colors.orange),
               ),
+            ] else if (_tempsEcoule) ...[
+              const SizedBox(height: 12),
+              const Text(
+                '⏰ Temps écoulé ! Réessaie de battre ton record.',
+                style: TextStyle(fontSize: 18, fontWeight: .bold),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: _recommencer,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Rejouer'),
+                style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              ),
             ],
           ],
         ),
       ),
-    );
+  );
+
+  /// Formate des secondes en « m:ss » (ex. 120 → 2:00).
+  String _formatTemps(int secondes) {
+    final m = secondes ~/ 60;
+    final s = (secondes % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   Widget _carteWidget(_Carte carte, int position) {
