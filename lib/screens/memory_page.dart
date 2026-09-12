@@ -360,7 +360,7 @@ class _MemoryPageState extends State<MemoryPage> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: .w600,
-                    color: _tempsJeuRestant <= 10 ? Colors.red : Colors.teal,
+                    color: _tempsJeuRestant <= 30 ? Colors.red : Colors.teal,
                   ),
                 ),
                 Text(
@@ -444,15 +444,7 @@ class _MemoryPageState extends State<MemoryPage> {
               ),
 ],
           ),
-        ),
-      );
-  }
-
-  /// Formate des secondes en « m:ss » (ex. 120 → 2:00).
-  String _formatTemps(int secondes) {
-    final m = secondes ~/ 60;
-    final s = (secondes % 60).toString().padLeft(2, '0');
-    return '$m:$s';
+        );
   }
 
   Widget _carteWidget(_Carte carte, int position) {
