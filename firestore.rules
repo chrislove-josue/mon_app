@@ -3,19 +3,45 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ============================================================
-    // Classements (lisibles par TOUS, écrits seulement par leur auteur)
+    // ADMINS — on EST admin si un document `admins/{uid}` existe.
+    // Lisible par tout utilisateur connecté (pour afficher/bouton admin),
+    // modifiable uniquement par les admins déjà connus.
+    // ============================================================
+    match /admins/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // ============================================================
+    // CONFIG — « nombre magique » (config/magic).
+    // Lu par les joueurs (pour deviner ce nombre), écrit par l'admin.
+    // ============================================================
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // ============================================================
+    // CLASSEMENTS (lisibles par TOUS, écrits par leur auteur ou un admin)
     // ============================================================
 
     // Jeu principal « Devine le nombre »
     match /scores/{uid} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && (request.auth.uid == uid || isAdmin());
     }
 
     // Mini-jeu « Mémory »
     match /memory_scores/{uid} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && (request.auth.uid == uid || isAdmin());
+    }
+
+    // ============================================================
+    // AIDE : « isAdmin » vérifie l'existence d'un document admins/{uid}.
+    // ============================================================
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
   }
 }

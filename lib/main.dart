@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -74,7 +75,28 @@ class Racine extends StatelessWidget {
         }
 
         final user = snapshot.data;
-        return user == null ? const LoginPage() : const GamePage();
+        if (user == null) return const LoginPage();
+
+        // Connecté : on charge le « nombre magique » du moment (config/magic).
+        // S'il existe, tous les joueurs devinent ce même nombre ; sinon,
+        // le jeu garde son tirage aléatoire habituel.
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('config')
+              .doc('magic')
+              .get(),
+          builder: (context, magicSnapshot) {
+            if (magicSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final data =
+                magicSnapshot.data?.data() as Map<String, dynamic>?;
+            final nombreMagique = data?['nombre'] as int?;
+            return GamePage(nombreMagique: nombreMagique);
+          },
+        );
       },
     );
   }

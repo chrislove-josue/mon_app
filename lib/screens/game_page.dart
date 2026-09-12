@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
+import '../services/admin_service.dart';
+import 'admin_page.dart';
 import 'classement_general_page.dart';
 import 'memory_page.dart';
 
@@ -23,12 +25,17 @@ class GamePage extends StatelessWidget {
     this.saveScore,
     this.onLogout,
     this.secretGenerator,
+    this.nombreMagique,
   });
 
   /// Injection utilisée dans les tests.
   final Future<void> Function(int tentatives)? saveScore;
   final VoidCallback? onLogout;
   final int Function()? secretGenerator;
+
+  /// Nombre magique global (défini par l'admin dans config/magic).
+  /// Null → tirage aléatoire habituel.
+  final int? nombreMagique;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +45,7 @@ class GamePage extends StatelessWidget {
       create: (_) => GameProvider(
         saveScore: saveScore,
         secretGenerator: secretGenerator,
+        nombreMagique: nombreMagique,
       )..nouvellePartie(),
       child: _GameView(onLogout: onLogout),
     );
@@ -58,10 +66,31 @@ class _GameView extends StatefulWidget {
 class _GameViewState extends State<_GameView> {
   final _controller = TextEditingController();
 
+  bool _estAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _verifierAdmin();
+  }
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Détecte si l'utilisateur connecté est admin (document `admins/{uid}`).
+  /// En mode test (pas de Firestore), l'appel échoue → pas d'icône admin.
+  Future<void> _verifierAdmin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final admin = await AdminService.instance.estAdmin(user.uid);
+      if (mounted) setState(() => _estAdmin = admin);
+    } catch (_) {
+      // Ignoré : en test l'icône admin ne s'affiche pas.
+    }
   }
 
   /// Déconnexion : retombe sur l'écran de connexion (via la Racine).
@@ -77,6 +106,13 @@ class _GameViewState extends State<_GameView> {
   void _ouvrirMemory() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const MemoryPage()),
+    );
+  }
+
+  /// Ouvre l'espace admin.
+  void _ouvrirAdmin() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AdminPage()),
     );
   }
 
@@ -101,6 +137,13 @@ class _GameViewState extends State<_GameView> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
+          // Espace admin : visible uniquement pour les admins.
+          if (_estAdmin)
+            IconButton(
+              tooltip: 'Espace admin',
+              icon: const Icon(Icons.admin_panel_settings),
+              onPressed: _ouvrirAdmin,
+            ),
           IconButton(
             tooltip: 'Jouer au Mémory',
             icon: const Icon(Icons.extension),

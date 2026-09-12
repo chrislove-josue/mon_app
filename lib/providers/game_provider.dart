@@ -21,11 +21,16 @@ import 'package:flutter/foundation.dart';
 /// ============================================================
 
 class GameProvider extends ChangeNotifier {
-  GameProvider({this.saveScore, this.secretGenerator});
+  GameProvider({this.saveScore, this.secretGenerator, this.nombreMagique});
 
   // --- Injection (utilisée dans les tests) ---
   final Future<void> Function(int tentatives)? saveScore;
   final int Function()? secretGenerator;
+
+  /// Nombre magique central (défini par l'admin dans `config/magic`).
+  /// S'il est fourni, TOUTES les parties se jouent avec ce nombre :
+  /// tout le monde devine le même nombre. Sinon, tirage aléatoire.
+  final int? nombreMagique;
 
   // --- Constantes ---
   static const maxTentatives = 10;
@@ -47,10 +52,13 @@ class GameProvider extends ChangeNotifier {
 
   /// Démarre un nouveau nombre secret.
   void nouvellePartie() {
-    // Par défaut : tirage aléatoire 1 → 100 (injectable dans les tests).
-    final aleatoire = secretGenerator ?? () => Random().nextInt(100) + 1;
-
-    _secret = aleatoire();
+    // Le nombre magique de l'admin prime ; sinon tirage aléatoire 1 → 100.
+    if (nombreMagique != null) {
+      _secret = nombreMagique!;
+    } else {
+      final aleatoire = secretGenerator ?? () => Random().nextInt(100) + 1;
+      _secret = aleatoire();
+    }
     _tentatives = 0;
     _dernierChiffre = null;
     _gagne = false;

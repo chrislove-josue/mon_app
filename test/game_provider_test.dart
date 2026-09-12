@@ -58,4 +58,24 @@ void main() {
     expect(game.dernierChiffre, isNull);
     expect(game.message, 'Entrée un nombre entre 1 et 100 !');
   });
+
+  test('Le nombre magique est utilisé et conservé entre les parties', () {
+    final game = GameProvider(
+      nombreMagique: 42,
+      saveScore: (_) async {},
+    );
+    game.nouvellePartie();
+
+    game.essayer('41');
+    expect(game.message, contains('Plus grand'));
+
+    // On relance une partie : le nombre magique reste le même (42).
+    game.nouvellePartie();
+    game.essayer('41');
+    expect(game.message, contains('Plus grand'));
+
+    game.essayer('42');
+    expect(game.gagne, isTrue);
+    expect(game.message, contains('BRAVO'));
+  });
 }
