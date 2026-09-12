@@ -445,9 +445,11 @@ Text(
                 label: const Text('Rejouer'),
                 style: FilledButton.styleFrom(backgroundColor: Colors.orange),
               ),
-],
+            ],
+            ],
           ),
-        );
+        ),
+      );
   }
 
   Widget _carteWidget(_Carte carte, int position) {
