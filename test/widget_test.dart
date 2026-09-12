@@ -21,40 +21,28 @@ Widget fabriqueJeu({
   );
 }
 
+/// Démarre la partie : clique sur « Commencer ».
+Future<void> demarrePartie(WidgetTester tester) async {
+  await tester.tap(find.text('Commencer'));
+  await tester.pump();
+}
+
 void main() {
-  testWidgets('Le jeu se lance et affiche le message de départ',
+  testWidgets('Le jeu se lance et affiche l écran de démarrage',
       (WidgetTester tester) async {
     await tester.pumpWidget(fabriqueJeu());
 
     expect(find.text('🎯 Devine le nombre'), findsOneWidget);
-    expect(find.text('Entrée un nombre entre 1 et 100 !'), findsOneWidget);
+    expect(find.textContaining('Commencer'), findsWidgets);
     expect(find.text('Tu as 10 tentatives maximum !'), findsOneWidget);
-    expect(find.text('Tentatives : 0 / 10'), findsOneWidget);
-    expect(find.text('⏱ Temps restant : 1:00'), findsOneWidget);
-  });
-
-  testWidgets('Le chrono décompte toutes les secondes',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(fabriqueJeu());
-
-    expect(find.text('⏱ Temps restant : 1:00'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 5));
-    expect(find.text('⏱ Temps restant : 0:55'), findsOneWidget);
-  });
-
-  testWidgets('Le temps écoulé termine la partie', (WidgetTester tester) async {
-    await tester.pumpWidget(fabriqueJeu());
-
-    await tester.pump(const Duration(seconds: 60));
-
-    expect(find.textContaining('Temps écoulé'), findsOneWidget);
-    expect(find.text('🔄 Rejouer'), findsOneWidget);
+    // Le chrono affiche les 2 minutes pleines.
+    expect(find.text('⏱ Temps restant : 2:00'), findsOneWidget);
   });
 
   testWidgets('Un essai invalide affiche un message d erreur',
       (WidgetTester tester) async {
     await tester.pumpWidget(fabriqueJeu());
+    await demarrePartie(tester);
 
     await tester.enterText(find.byType(TextField), 'abc');
     await tester.tap(find.text('Essayer'));
@@ -66,6 +54,7 @@ void main() {
 
   testWidgets('Un mauvais essai réduit le compteur', (WidgetTester tester) async {
     await tester.pumpWidget(fabriqueJeu(secretGenerator: () => 7));
+    await demarrePartie(tester);
 
     await tester.enterText(find.byType(TextField), '42');
     await tester.tap(find.text('Essayer'));
@@ -85,6 +74,7 @@ void main() {
         secretGenerator: () => 42, // le secret est connu
       ),
     );
+    await demarrePartie(tester);
 
     await tester.enterText(find.byType(TextField), '42');
     await tester.tap(find.text('Essayer'));
@@ -109,11 +99,43 @@ void main() {
     expect(deconnecte, isTrue);
   });
 
-  testWidgets('Le Mémory démarre carte ouvertes, puis referme après 5 s',
+  testWidgets('Le chrono décompte toutes les secondes une fois lancé',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(fabriqueJeu());
+    await demarrePartie(tester);
+
+    expect(find.text('⏱ Temps restant : 2:00'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.text('⏱ Temps restant : 1:55'), findsOneWidget);
+  });
+
+  testWidgets('Le temps écoulé termine la partie', (WidgetTester tester) async {
+    await tester.pumpWidget(fabriqueJeu());
+    await demarrePartie(tester);
+
+    await tester.pump(const Duration(seconds: 120));
+
+    expect(find.textContaining('Temps écoulé'), findsOneWidget);
+    expect(find.text('🔄 Rejouer'), findsOneWidget);
+  });
+
+  testWidgets('Le Mémory affiche un écran Commencer au lancement',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
 
+    expect(find.text('Prêt à jouer au Mémory ?'), findsOneWidget);
+    expect(find.text('Commencer'), findsOneWidget);
+  });
+
+  testWidgets('Le Mémory démarre, mémorise 5 s puis referme les cartes',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+    await tester.tap(find.text('Commencer'));
+    await tester.pump();
+
     expect(find.text('Coups : 0'), findsOneWidget);
+    expect(find.text('⏱ 2:00'), findsOneWidget);
     // Phase de mémorisation : toutes les cartes sont ouvertes (aucun « ? »).
     expect(find.byIcon(Icons.question_mark), findsNothing);
 
@@ -125,6 +147,8 @@ void main() {
   testWidgets('Le Mémory permet de retourner des cartes',
       (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+    await tester.tap(find.text('Commencer'));
+    await tester.pump();
 
     // Attend la fin de la mémorisation pour pouvoir jouer.
     await tester.pump(const Duration(seconds: 5));
