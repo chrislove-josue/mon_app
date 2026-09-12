@@ -21,6 +21,15 @@ Widget fabriqueJeu({
   );
 }
 
+/// Lance le Mémory dans une app de test avec un ripple classique
+/// (évite le shader M3 "sparkle" non compilable dans les tests).
+Widget fabriqueMemoire() {
+  return MaterialApp(
+    theme: ThemeData(splashFactory: InkRipple.splashFactory),
+    home: const MemoryPage(),
+  );
+}
+
 /// Démarre la partie : clique sur « Commencer ».
 Future<void> demarrePartie(WidgetTester tester) async {
   await tester.tap(find.text('Commencer'));
@@ -122,7 +131,7 @@ void main() {
 
   testWidgets('Le Mémory affiche un écran Commencer au lancement',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+    await tester.pumpWidget(fabriqueMemoire());
 
     expect(find.text('Prêt à jouer au Mémory ?'), findsOneWidget);
     expect(find.text('Commencer'), findsOneWidget);
@@ -130,7 +139,7 @@ void main() {
 
   testWidgets('Le Mémory démarre, mémorise 5 s puis referme les cartes',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+    await tester.pumpWidget(fabriqueMemoire());
     await tester.tap(find.text('Commencer'));
     await tester.pump();
 
@@ -146,7 +155,7 @@ void main() {
 
   testWidgets('Le Mémory permet de retourner des cartes',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: MemoryPage()));
+    await tester.pumpWidget(fabriqueMemoire());
     await tester.tap(find.text('Commencer'));
     await tester.pump();
 

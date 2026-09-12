@@ -331,14 +331,16 @@ class _MemoryPageState extends State<MemoryPage> {
                     FilledButton.icon(
                       onPressed: _demarrer,
                       icon: const Icon(Icons.play_arrow, size: 28),
-                      label: const Text('Commencer'),
+                      label: const Text(
+                        'Commencer',
+                        style: TextStyle(fontSize: 20),
+                      ),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 40,
                           vertical: 18,
                         ),
                         backgroundColor: Colors.teal,
-                        textStyle: const TextStyle(fontSize: 20),
                       ),
                     ),
                   ],
@@ -364,7 +366,6 @@ Text(
                     fontWeight: .w600,
                     color: _tempsJeuRestant <= 10 ? Colors.red : Colors.teal,
                   ),
-                ),
                 ),
                 Text(
                   'Paires : ${_cartes.where((c) => c.trouvee).length ~/ 2} / '
@@ -450,6 +451,13 @@ Text(
           ),
         ),
       );
+  }
+
+  /// Formate des secondes en « m:ss » (ex. 120 → 2:00).
+  String _formatTemps(int secondes) {
+    final m = secondes ~/ 60;
+    final s = (secondes % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   Widget _carteWidget(_Carte carte, int position) {

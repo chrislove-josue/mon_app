@@ -270,14 +270,16 @@ class _GameViewState extends State<_GameView> {
                   _demarrerChrono();
                 },
                 icon: const Icon(Icons.play_arrow, size: 28),
-                label: const Text('Commencer'),
+                label: const Text(
+                  'Commencer',
+                  style: TextStyle(fontSize: 20),
+                ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
                     vertical: 18,
                   ),
                   backgroundColor: Colors.teal,
-                  textStyle: const TextStyle(fontSize: 20),
                 ),
               ),
             ] else ...[
