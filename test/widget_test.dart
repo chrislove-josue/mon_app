@@ -8,6 +8,8 @@ Widget fabriqueJeu({
   Future<void> Function(int)? saveScore,
   VoidCallback? onLogout,
   int Function()? secretGenerator,
+  int? nombreMagique,
+  Future<void> Function(int)? onNombreMagiqueTrouve,
 }) {
   return MaterialApp(
     // Ripple classique (comme dans l'app) : évite le shader "sparkle"
@@ -17,6 +19,8 @@ Widget fabriqueJeu({
       saveScore: saveScore,
       onLogout: onLogout,
       secretGenerator: secretGenerator,
+      nombreMagique: nombreMagique,
+      onNombreMagiqueTrouve: onNombreMagiqueTrouve,
     ),
   );
 }
@@ -93,6 +97,26 @@ void main() {
     expect(sauvegardes.first, 1);
     expect(find.textContaining('BRAVO'), findsOneWidget);
     expect(find.text('🔄 Rejouer'), findsOneWidget);
+  });
+
+  testWidgets('La victoire sur le nombre magique régénère un nouveau',
+      (WidgetTester tester) async {
+    final trouves = <int>[];
+    await tester.pumpWidget(
+      fabriqueJeu(
+        saveScore: (tentatives) async {},
+        nombreMagique: 42,
+        onNombreMagiqueTrouve: (nombre) async => trouves.add(nombre),
+      ),
+    );
+    await demarrePartie(tester);
+
+    await tester.enterText(find.byType(TextField), '42');
+    await tester.tap(find.text('Essayer'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('BRAVO'), findsOneWidget);
+    expect(trouves, [42]);
   });
 
   testWidgets('Le bouton de déconnexion est appelé',

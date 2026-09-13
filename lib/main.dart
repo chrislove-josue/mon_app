@@ -101,7 +101,8 @@ class Racine extends StatelessWidget {
               // Dès qu'un joueur trouve le nombre magique, la base en tire
               // un nouveau tout seul → tous les suivants devinent un AUTRE
               // nombre.
-              onNombreMagiqueTrouve: AdminService.instance.regenererNombreMagique,
+              onNombreMagiqueTrouve: (_) =>
+                  AdminService.instance.regenererNombreMagique(),
             );
           },
         );
