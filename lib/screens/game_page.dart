@@ -59,6 +59,7 @@ class _GamePageState extends State<GamePage> {
     _game = GameProvider(
       saveScore: widget.saveScore,
       secretGenerator: widget.secretGenerator,
+      onNombreMagiqueTrouve: widget.onNombreMagiqueTrouve,
       nombreMagique: widget.nombreMagique,
     )..nouvellePartie();
   }

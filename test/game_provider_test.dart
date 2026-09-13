@@ -114,6 +114,39 @@ void main() {
     expect(game.gagne, isTrue);
   });
 
+  test('Trouver le nombre magique déclenche sa régénération', () {
+    final trouves = <int>[];
+    final game = GameProvider(
+      nombreMagique: 42,
+      saveScore: (_) async {},
+      onNombreMagiqueTrouve: (nombre) async => trouves.add(nombre),
+    );
+    game.commencerPartie();
+
+    // Une partie non magique : pas de régénération.
+    game.essayer('41');
+    expect(trouves, isEmpty);
+
+    // On gagne sur le nombre magique → régénération déclenchée.
+    game.essayer('42');
+    expect(game.gagne, isTrue);
+    expect(trouves, [42]);
+  });
+
+  test('Une victoire sans nombre magique ne régénère rien', () {
+    final trouves = <int>[];
+    final game = GameProvider(
+      secretGenerator: () => 42,
+      saveScore: (_) async {},
+      onNombreMagiqueTrouve: (nombre) async => trouves.add(nombre),
+    );
+    game.commencerPartie();
+
+    game.essayer('42');
+    expect(game.gagne, isTrue);
+    expect(trouves, isEmpty);
+  });
+
   group('Chrono (2 minutes de jeu)', () {
     test('Le temps écoulé déclenche la défaite', () {
       final game = GameProvider(
