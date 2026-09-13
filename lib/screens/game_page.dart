@@ -28,6 +28,7 @@ class GamePage extends StatefulWidget {
     this.onLogout,
     this.secretGenerator,
     this.nombreMagique,
+    this.onNombreMagiqueTrouve,
   });
 
   /// Injection utilisée dans les tests.
@@ -39,6 +40,9 @@ class GamePage extends StatefulWidget {
   /// Null → tirage aléatoire habituel. Le widget le met à jour en direct
   /// quand le StreamBuilder de la Racine détecte un changement.
   final int? nombreMagique;
+
+  /// Appelé quand un joueur trouve le nombre magique (régénération auto).
+  final Future<void> Function(int nombreTrouve)? onNombreMagiqueTrouve;
 
   @override
   State<GamePage> createState() => _GamePageState();

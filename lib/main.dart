@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'screens/game_page.dart';
 import 'screens/login_page.dart';
+import 'services/admin_service.dart';
 import 'services/notification_service.dart';
 
 /// ============================================================
@@ -95,7 +96,13 @@ class Racine extends StatelessWidget {
             final data =
                 magicSnapshot.data?.data() as Map<String, dynamic>?;
             final nombreMagique = data?['nombre'] as int?;
-            return GamePage(nombreMagique: nombreMagique);
+            return GamePage(
+              nombreMagique: nombreMagique,
+              // Dès qu'un joueur trouve le nombre magique, la base en tire
+              // un nouveau tout seul → tous les suivants devinent un AUTRE
+              // nombre.
+              onNombreMagiqueTrouve: AdminService.instance.regenererNombreMagique,
+            );
           },
         );
       },

@@ -24,6 +24,7 @@ class GameProvider extends ChangeNotifier {
   GameProvider({
     this.saveScore,
     this.secretGenerator,
+    this.onNombreMagiqueTrouve,
     this._nombreMagique,
     this.dureePartieSecondes = defaultDureePartie,
   });
@@ -31,6 +32,11 @@ class GameProvider extends ChangeNotifier {
   // --- Injection (utilisée dans les tests) ---
   final Future<void> Function(int tentatives)? saveScore;
   final int Function()? secretGenerator;
+
+  /// Appelé dès qu'un joueur trouve le nombre magique : permet de le
+  /// régénérer automatiquement (un nouveau nombre pour les parties à venir).
+  /// Null en mode test → aucune régénération.
+  final Future<void> Function(int nombreTrouve)? onNombreMagiqueTrouve;
 
   /// Nombre magique central (défini par l'admin dans `config/magic`).
   /// S'il est fourni, TOUTES les parties se jouent avec ce nombre :
@@ -63,6 +69,11 @@ class GameProvider extends ChangeNotifier {
   bool _perdu = false;
   int _tempsRestant = 0;
   bool _partieEnCours = false;
+
+  /// La partie en cours se joue-t-elle sur le nombre magique ?
+  /// (au moment de « Commencer », le secret était celui du document
+  /// config/magic). Permet de savoir s'il faut le régénérer à la victoire.
+  bool _partieSurNombreMagique = false;
 
   // --- Getters : les widgets affichent ces valeurs ---
   int get tentatives => _tentatives;
@@ -97,9 +108,11 @@ class GameProvider extends ChangeNotifier {
   void commencerPartie() {
     if (_nombreMagique != null) {
       _secret = _nombreMagique!;
+      _partieSurNombreMagique = true;
     } else {
       final aleatoire = secretGenerator ?? () => Random().nextInt(100) + 1;
       _secret = aleatoire();
+      _partieSurNombreMagique = false;
     }
     _tentatives = 0;
     _dernierChiffre = null;
@@ -136,6 +149,9 @@ class GameProvider extends ChangeNotifier {
           '$_tentatives tentatives !';
       // On sauvegarde le score (les erreurs sont ignorées).
       _enregistrerScore(_tentatives);
+      // Nombre magique trouvé → on en tire un nouveau pour la suite
+      // (les erreurs sont ignorées : le jeu continue).
+      _regenererNombreMagiqueSiTrouve();
     } else if (_tentatives >= maxTentatives) {
       // Plus aucun essai restant → défaite
       _perdu = true;
@@ -162,6 +178,13 @@ class GameProvider extends ChangeNotifier {
       _message = '⏰ Temps écoulé ! Le nombre était $_secret.';
     }
     notifyListeners();
+  }
+
+  /// Si la partie se jouait sur le nombre magique ET que le joueur a gagné,
+  /// on prévient (via le callback injecté) qu'il faut en tirer un nouveau.
+  void _regenererNombreMagiqueSiTrouve() {
+    if (!_partieSurNombreMagique || onNombreMagiqueTrouve == null) return;
+    onNombreMagiqueTrouve!(_secret);
   }
 
   /// Sauvegarde le record. Le « meilleur » score = le moins de tentatives.

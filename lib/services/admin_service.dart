@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// ============================================================
 /// SERVICE ADMIN (Firestore)
@@ -43,6 +46,21 @@ class AdminService {
       'choisiPar': email,
       'miseAJour': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Tire un NOUVEAU nombre magique (1 → 100, différent de l'actuel) et
+  /// l'enregistre pour tous les joueurs. Appelé automatiquement dès qu'un
+  /// joueur trouve le nombre en cours.
+  Future<void> regenererNombreMagique() async {
+    final actuel = await chargerNombreMagique();
+    // On garantit un nombre DIFFÉRENT du précédent, sinon le jeu serait
+    // figé sur le même nombre.
+    var nouveau = Random().nextInt(100) + 1;
+    if (nouveau == actuel) {
+      nouveau = actuel == 100 ? 1 : (actuel ?? 1) + 1;
+    }
+    final email = FirebaseAuth.instance.currentUser?.email ?? 'partie';
+    await definirNombreMagique(nouveau, email);
   }
 
   /// Modifie le score d'un joueur (champ = 'tentatives' ou 'coups').
