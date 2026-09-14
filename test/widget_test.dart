@@ -53,6 +53,8 @@ void main() {
 
     expect(find.text('Jouer hors ligne'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Jouer hors ligne'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Jouer hors ligne'));
     await tester.pump();
 
