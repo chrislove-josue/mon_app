@@ -47,6 +47,7 @@ void main() {
     var joueHorsLigne = false;
     await tester.pumpWidget(
       MaterialApp(
+        theme: ThemeData(splashFactory: InkRipple.splashFactory),
         home: LoginPage(onJouerHorsLigne: () => joueHorsLigne = true),
       ),
     );
