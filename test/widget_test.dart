@@ -51,6 +51,8 @@ void main() {
     expect(find.textContaining('Commencer'), findsWidgets);
     // …et une icône « Se connecter » permet d'accéder au classement.
     expect(find.byIcon(Icons.login), findsOneWidget);
+    // Le Mémory est accessible même hors ligne.
+    expect(find.byIcon(Icons.extension), findsOneWidget);
     // Pas de bouton de déconnexion ni de classement en ligne en invité.
     expect(find.byIcon(Icons.logout), findsNothing);
     expect(find.byIcon(Icons.leaderboard), findsNothing);

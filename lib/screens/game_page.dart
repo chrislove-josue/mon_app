@@ -231,6 +231,11 @@ class _GameViewState extends State<_GameView> {
           // et se connecter quand on veut pour le classement.
           if (widget.guest) ...[
             IconButton(
+              tooltip: 'Jouer au Mémory',
+              icon: const Icon(Icons.extension),
+              onPressed: _ouvrirMemory,
+            ),
+            IconButton(
               tooltip: 'Se connecter',
               icon: const Icon(Icons.login),
               onPressed: _ouvrirConnexion,
