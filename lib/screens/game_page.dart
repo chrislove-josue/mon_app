@@ -275,7 +275,7 @@ class _GameViewState extends State<_GameView> {
                 children: [
                   Icon(Icons.wifi_off, size: 18, color: Colors.orange.shade800),
                   const SizedBox(width: 8),
-                  const Flexible(
+                  Flexible(
                     child: Text(
                       'Vous jouez hors ligne : pas besoin de compte ni de connexion Internet. '
                       'Vos scores ne sont pas enregistrés au classement.',
@@ -410,12 +410,12 @@ class _GameViewState extends State<_GameView> {
                 child: const Text('🔄 Rejouer'),
               ),
             ],
-              ),
-            ),
-          ),
           ],
         ),
       ),
-    );
+    ),
+  ],
+),
+);
   }
 }
