@@ -262,17 +262,41 @@ class _GameViewState extends State<_GameView> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            // L'énoncé
-            const Text(
-              'Je pense à un nombre entre 1 et 100',
-              style: TextStyle(fontSize: 18),
-              textAlign: .center,
+      body: Column(
+        children: [
+          // En mode invité : bannière « vous jouez hors ligne ».
+          if (widget.guest)
+            Container(
+              width: double.infinity,
+              color: Colors.orange.shade50,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisAlignment: .center,
+                children: [
+                  Icon(Icons.wifi_off, size: 18, color: Colors.orange.shade800),
+                  const SizedBox(width: 8),
+                  const Flexible(
+                    child: Text(
+                      'Vous jouez hors ligne : pas besoin de compte ni de connexion Internet. '
+                      'Vos scores ne sont pas enregistrés au classement.',
+                      style: TextStyle(fontSize: 13, color: Colors.orange.shade900),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: .center,
+                children: [
+                  // L'énoncé
+                  const Text(
+                    'Je pense à un nombre entre 1 et 100',
+                    style: TextStyle(fontSize: 18),
+                    textAlign: .center,
+                  ),
             const SizedBox(height: 8),
             Text(
               'Tu as ${GameProvider.maxTentatives} tentatives maximum !',
@@ -386,6 +410,8 @@ class _GameViewState extends State<_GameView> {
                 child: const Text('🔄 Rejouer'),
               ),
             ],
+              ),
+            ),
           ],
         ),
       ),
