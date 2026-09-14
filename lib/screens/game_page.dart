@@ -412,6 +412,7 @@ class _GameViewState extends State<_GameView> {
             ],
               ),
             ),
+          ),
           ],
         ),
       ),
