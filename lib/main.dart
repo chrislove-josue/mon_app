@@ -27,11 +27,24 @@ Future<void> main() async {
   // 2. Démarre Firebase avec la config de ta plateforme (web, android...).
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 3. Prépare les notifications push (permission, token, topic).
-  //    Ignore les erreurs : sur desktop/web elles peuvent ne pas être actives.
-  await NotificationService.instance.initialiser().catchError((_) {});
+  // 3. Active la persistance locale de Firestore : les données (scores,
+  //    config...) sont mises en cache sur l'appareil → le jeu reste
+  //    utilisable SANS connexion internet.
+  try {
+    FirebaseFirestore.instance.settings =
+        const Settings(persistenceEnabled: true);
+  } catch (_) {
+    // Certains environnements n'autorisent pas les settings : on ignore.
+  }
 
-  // 4. Lance l'application.
+  // 4. Prépare les notifications push (permission, token, topic).
+  //    Hors ligne, ces appels échouent : on les ignore avec un délai max
+  //    pour ne PAS bloquer le démarrage de l'app sans internet.
+  await NotificationService.instance.initialiser().timeout(
+    const Duration(seconds: 8),
+  ).catchError((_) {});
+
+  // 5. Lance l'application.
   runApp(const MonJeu());
 }
 
@@ -56,15 +69,41 @@ class MonJeu extends StatelessWidget {
   }
 }
 
-/// Racine : décide quelle page afficher en fonction de la connexion.
+/// Racine : décide quelle page afficher selon la connexion.
 /// Firebase Auth émet en continu l'état de connexion via authStateChanges() :
 ///   - personne connectée  → écran de connexion
 ///   - utilisateur connecté → le jeu !
-class Racine extends StatelessWidget {
+///
+/// Toujours un plan B : le mode « hors ligne ». Sans internet (ni compte),
+/// on peut quand même jouer : le jeu ne dépend d'aucun serveur pour jouer,
+/// seuls les scores/classements/nombre magique ont besoin du réseau.
+class Racine extends StatefulWidget {
   const Racine({super.key});
 
   @override
+  State<Racine> createState() => _RacineState();
+}
+
+class _RacineState extends State<Racine> {
+  /// True = mode hors ligne / invité : on joue sans compte ni réseau.
+  bool _horsLigne = false;
+
+  /// Entre en mode hors ligne depuis l'écran de connexion.
+  void _jouerHorsLigne() => setState(() => _horsLigne = true);
+
+  /// Quitte le mode hors ligne → retour à l'écran de connexion.
+  void _quitterHorsLigne() => setState(() => _horsLigne = false);
+
+  @override
   Widget build(BuildContext context) {
+    // Mode hors ligne : le jeu fonctionne sans compte ni internet.
+    // Pas de nombre magique (il vient de Firestore) → tirage aléatoire.
+    if (_horsLigne) {
+      return GamePage(
+        onLogout: _quitterHorsLigne,
+      );
+    }
+
     return StreamBuilder<User?>(
       // Ce stream se met à jour automatiquement à chaque login/logout.
       stream: FirebaseAuth.instance.authStateChanges(),
@@ -76,7 +115,7 @@ class Racine extends StatelessWidget {
         }
 
         final user = snapshot.data;
-        if (user == null) return const LoginPage();
+        if (user == null) return LoginPage(onJouerHorsLigne: _jouerHorsLigne);
 
         // Connecté : on suit EN DIRECT le « nombre magique » (config/magic).
         // S'il existe, tous les joueurs devinent ce même nombre ; sinon,

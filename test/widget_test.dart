@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mon_app/screens/game_page.dart';
+import 'package:mon_app/screens/login_page.dart';
 import 'package:mon_app/screens/memory_page.dart';
 
 Widget fabriqueJeu({
@@ -41,6 +42,36 @@ Future<void> demarrePartie(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('La page de connexion propose de jouer hors ligne',
+      (WidgetTester tester) async {
+    var joueHorsLigne = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginPage(onJouerHorsLigne: () => joueHorsLigne = true),
+      ),
+    );
+
+    expect(find.text('Jouer hors ligne'), findsOneWidget);
+
+    await tester.tap(find.text('Jouer hors ligne'));
+    await tester.pump();
+
+    expect(joueHorsLigne, isTrue);
+  });
+
+  testWidgets('Le jeu se lance sans nombre magique (mode hors ligne)',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(fabriqueJeu());
+
+    // En mode hors ligne, pas de nombre magique : le jeu garde son tirage
+    // aléatoire et démarre normalement.
+    expect(find.textContaining('Commencer'), findsWidgets);
+    expect(find.text('⏱ Temps restant : 2:00'), findsOneWidget);
+
+    await demarrePartie(tester);
+    expect(find.text('Essayer'), findsOneWidget);
+  });
+
   testWidgets('Le jeu se lance et affiche l écran de démarrage',
       (WidgetTester tester) async {
     await tester.pumpWidget(fabriqueJeu());
