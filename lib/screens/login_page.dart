@@ -12,10 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// ============================================================
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key, this.onJouerHorsLigne});
-
-  /// Appelé quand l'utilisateur veut jouer sans compte ni internet.
-  final VoidCallback? onJouerHorsLigne;
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -112,6 +109,12 @@ class _LoginPageState extends State<LoginPage> {
     const largeurMax = 420.0;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Connexion'),
+        centerTitle: true,
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -229,36 +232,6 @@ class _LoginPageState extends State<LoginPage> {
                     style: const TextStyle(color: Colors.teal),
                   ),
                 ),
-
-                // =====================================================
-                // JOUER HORS LIGNE — sans compte ni connexion internet.
-                // Le jeu ne dépend d'aucun serveur : parfait pour jouer
-                // dans un endroit sans réseau. Les scores ne sont alors
-                // pas enregistrés dans le classement.
-                // =====================================================
-                if (widget.onJouerHorsLigne != null) ...[
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _chargement
-                        ? null
-                        : widget.onJouerHorsLigne,
-                    icon: const Icon(Icons.wifi_off),
-                    label: const Text('Jouer hors ligne'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange.shade800,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: Colors.orange.shade800),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Sans compte ni connexion internet',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                    textAlign: .center,
-                  ),
-                ],
 
                 // Zone de téléchargement de l'APK Android (visible seulement
                 // sur le web — c'est sur un navigateur qu'on veut l'APK !).

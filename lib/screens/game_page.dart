@@ -8,6 +8,7 @@ import '../providers/game_provider.dart';
 import '../services/admin_service.dart';
 import 'admin_page.dart';
 import 'classement_general_page.dart';
+import 'login_page.dart';
 import 'memory_page.dart';
 
 /// ============================================================
@@ -29,6 +30,7 @@ class GamePage extends StatefulWidget {
     this.secretGenerator,
     this.nombreMagique,
     this.onNombreMagiqueTrouve,
+    this.guest = false,
   });
 
   /// Injection utilisée dans les tests.
@@ -43,6 +45,11 @@ class GamePage extends StatefulWidget {
 
   /// Appelé quand un joueur trouve le nombre magique (régénération auto).
   final Future<void> Function(int nombreTrouve)? onNombreMagiqueTrouve;
+
+  /// True = mode invité (personne de connecté) : on joue sans compte,
+  /// sans modifier les classements. Le bouton « Se connecter » prend alors
+  /// la place du bouton de déconnexion.
+  final bool guest;
 
   @override
   State<GamePage> createState() => _GamePageState();
@@ -86,7 +93,7 @@ class _GamePageState extends State<GamePage> {
     // reste le même d'un build à l'autre (l'état du jeu est préservé).
     return ChangeNotifierProvider<GameProvider>.value(
       value: _game,
-      child: _GameView(onLogout: widget.onLogout),
+      child: _GameView(onLogout: widget.onLogout, guest: widget.guest),
     );
   }
 }
@@ -94,9 +101,12 @@ class _GamePageState extends State<GamePage> {
 /// La partie « interface » du jeu. StatefulWidget parce qu'elle possède
 /// le TextEditingController (qui doit être libéré avec dispose()).
 class _GameView extends StatefulWidget {
-  const _GameView({this.onLogout});
+  const _GameView({this.onLogout, this.guest = false});
 
   final VoidCallback? onLogout;
+
+  /// True en mode invité : affiche « Se connecter » au lieu de « Déconnexion ».
+  final bool guest;
 
   @override
   State<_GameView> createState() => _GameViewState();
@@ -175,6 +185,13 @@ class _GameViewState extends State<_GameView> {
     }
   }
 
+  /// Ouvre l'écran de connexion (mode invité).
+  void _ouvrirConnexion() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
+  }
+
   /// Ouvre le jeu du Mémory.
   void _ouvrirMemory() {
     Navigator.of(context).push(
@@ -210,28 +227,38 @@ class _GameViewState extends State<_GameView> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
-          // Espace admin : visible uniquement pour les admins.
-          if (_estAdmin)
+          // Mode invité (personne de connecté) : on peut toujours jouer,
+          // et se connecter quand on veut pour le classement.
+          if (widget.guest) ...[
             IconButton(
-              tooltip: 'Espace admin',
-              icon: const Icon(Icons.admin_panel_settings),
-              onPressed: _ouvrirAdmin,
+              tooltip: 'Se connecter',
+              icon: const Icon(Icons.login),
+              onPressed: _ouvrirConnexion,
             ),
-          IconButton(
-            tooltip: 'Jouer au Mémory',
-            icon: const Icon(Icons.extension),
-            onPressed: _ouvrirMemory,
-          ),
-          IconButton(
-            tooltip: 'Classements',
-            icon: const Icon(Icons.leaderboard),
-            onPressed: _ouvrirClassement,
-          ),
-          IconButton(
-            tooltip: 'Déconnexion',
-            icon: const Icon(Icons.logout),
-            onPressed: _deconnexion,
-          ),
+          ] else ...[
+            // Espace admin : visible uniquement pour les admins.
+            if (_estAdmin)
+              IconButton(
+                tooltip: 'Espace admin',
+                icon: const Icon(Icons.admin_panel_settings),
+                onPressed: _ouvrirAdmin,
+              ),
+            IconButton(
+              tooltip: 'Jouer au Mémory',
+              icon: const Icon(Icons.extension),
+              onPressed: _ouvrirMemory,
+            ),
+            IconButton(
+              tooltip: 'Classements',
+              icon: const Icon(Icons.leaderboard),
+              onPressed: _ouvrirClassement,
+            ),
+            IconButton(
+              tooltip: 'Déconnexion',
+              icon: const Icon(Icons.logout),
+              onPressed: _deconnexion,
+            ),
+          ],
           const SizedBox(width: 8),
         ],
       ),

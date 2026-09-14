@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mon_app/screens/game_page.dart';
-import 'package:mon_app/screens/login_page.dart';
 import 'package:mon_app/screens/memory_page.dart';
 
 Widget fabriqueJeu({
@@ -11,6 +10,7 @@ Widget fabriqueJeu({
   int Function()? secretGenerator,
   int? nombreMagique,
   Future<void> Function(int)? onNombreMagiqueTrouve,
+  bool guest = false,
 }) {
   return MaterialApp(
     // Ripple classique (comme dans l'app) : évite le shader "sparkle"
@@ -22,6 +22,7 @@ Widget fabriqueJeu({
       secretGenerator: secretGenerator,
       nombreMagique: nombreMagique,
       onNombreMagiqueTrouve: onNombreMagiqueTrouve,
+      guest: guest,
     ),
   );
 }
@@ -42,24 +43,17 @@ Future<void> demarrePartie(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('La page de connexion propose de jouer hors ligne',
+  testWidgets('En mode invité, le jeu montre « Se connecter »',
       (WidgetTester tester) async {
-    var joueHorsLigne = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData(splashFactory: InkRipple.splashFactory),
-        home: LoginPage(onJouerHorsLigne: () => joueHorsLigne = true),
-      ),
-    );
+    await tester.pumpWidget(fabriqueJeu(guest: true));
 
-    expect(find.text('Jouer hors ligne'), findsOneWidget);
-
-    await tester.ensureVisible(find.text('Jouer hors ligne'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Jouer hors ligne'));
-    await tester.pump();
-
-    expect(joueHorsLigne, isTrue);
+    // Le jeu est jouable sans compte…
+    expect(find.textContaining('Commencer'), findsWidgets);
+    // …et une icône « Se connecter » permet d'accéder au classement.
+    expect(find.byIcon(Icons.login), findsOneWidget);
+    // Pas de bouton de déconnexion ni de classement en ligne en invité.
+    expect(find.byIcon(Icons.logout), findsNothing);
+    expect(find.byIcon(Icons.leaderboard), findsNothing);
   });
 
   testWidgets('Le jeu se lance sans nombre magique (mode hors ligne)',

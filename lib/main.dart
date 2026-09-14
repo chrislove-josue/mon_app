@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
 import 'screens/game_page.dart';
-import 'screens/login_page.dart';
 import 'services/admin_service.dart';
 import 'services/notification_service.dart';
 
@@ -69,41 +68,19 @@ class MonJeu extends StatelessWidget {
   }
 }
 
-/// Racine : décide quelle page afficher selon la connexion.
-/// Firebase Auth émet en continu l'état de connexion via authStateChanges() :
-///   - personne connectée  → écran de connexion
-///   - utilisateur connecté → le jeu !
+/// Racine : donne accès au JEU dès le lancement.
+/// Firebase Auth émet l'état de connexion via authStateChanges() :
+///   - personne connectée  → on joue en INVIÉTÉ (100 % local)
+///   - utilisateur connecté → le jeu avec nombre magique + classements
 ///
-/// Toujours un plan B : le mode « hors ligne ». Sans internet (ni compte),
-/// on peut quand même jouer : le jeu ne dépend d'aucun serveur pour jouer,
-/// seuls les scores/classements/nombre magique ont besoin du réseau.
-class Racine extends StatefulWidget {
+/// Plus d'écran de connexion bloquant : chacun joue tout de suite.
+/// Chacun peut se connecter plus tard (bouton « Se connecter » dans le jeu)
+/// pour sauvegarder ses scores au classement.
+class Racine extends StatelessWidget {
   const Racine({super.key});
 
   @override
-  State<Racine> createState() => _RacineState();
-}
-
-class _RacineState extends State<Racine> {
-  /// True = mode hors ligne / invité : on joue sans compte ni réseau.
-  bool _horsLigne = false;
-
-  /// Entre en mode hors ligne depuis l'écran de connexion.
-  void _jouerHorsLigne() => setState(() => _horsLigne = true);
-
-  /// Quitte le mode hors ligne → retour à l'écran de connexion.
-  void _quitterHorsLigne() => setState(() => _horsLigne = false);
-
-  @override
   Widget build(BuildContext context) {
-    // Mode hors ligne : le jeu fonctionne sans compte ni internet.
-    // Pas de nombre magique (il vient de Firestore) → tirage aléatoire.
-    if (_horsLigne) {
-      return GamePage(
-        onLogout: _quitterHorsLigne,
-      );
-    }
-
     return StreamBuilder<User?>(
       // Ce stream se met à jour automatiquement à chaque login/logout.
       stream: FirebaseAuth.instance.authStateChanges(),
@@ -115,7 +92,12 @@ class _RacineState extends State<Racine> {
         }
 
         final user = snapshot.data;
-        if (user == null) return LoginPage(onJouerHorsLigne: _jouerHorsLigne);
+
+        // Pas de compte → jeu en mode invité (sans libellé « recherche
+        // nombre magique » : il vient de Firestore, donc tirage aléatoire).
+        if (user == null) {
+          return const GamePage(guest: true);
+        }
 
         // Connecté : on suit EN DIRECT le « nombre magique » (config/magic).
         // S'il existe, tous les joueurs devinent ce même nombre ; sinon,
